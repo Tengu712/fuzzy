@@ -62,7 +62,7 @@ enum Mode {
     Token,
 }
 impl Mode {
-    fn parse(
+    fn dispatch(
         &mut self,
         c: char,
         ln: usize,
@@ -72,7 +72,7 @@ impl Mode {
     ) {
         match self {
             Mode::Blank => match c {
-                ' ' | '\t' | '\r' | '\n' => (),
+                ' ' | '\t' => (),
                 '.' => tokens.push(TokenMeta::dot(ln, cn)),
                 _ => {
                     *token = TempToken::new(ln, cn);
@@ -81,17 +81,22 @@ impl Mode {
                 }
             },
             Mode::Token => match c {
-                ' ' | '\t' | '\r' | '\n' => {
+                ' ' | '\t' | '.' => {
                     tokens.push(TokenMeta::new(&token.s, token.ln, token.cn));
-                    *self = Mode::Blank;
-                }
-                '.' => {
-                    tokens.push(TokenMeta::new(&token.s, token.ln, token.cn));
-                    tokens.push(TokenMeta::dot(ln, cn));
+                    if c == '.' {
+                        tokens.push(TokenMeta::dot(ln, cn));
+                    }
                     *self = Mode::Blank;
                 }
                 _ => token.s.push(c),
             },
+        }
+    }
+
+    fn dispatch_before_eol(self, token: TempToken, tokens: &mut Vec<TokenMeta>) {
+        match self {
+            Mode::Token => tokens.push(TokenMeta::new(&token.s, token.ln, token.cn)),
+            _ => (),
         }
     }
 }
@@ -107,9 +112,10 @@ pub fn parse<R: Read>(content: R) -> Result<Vec<TokenMeta>, EError> {
 
     for (ln, l) in BufReader::new(content).lines().enumerate() {
         for (cn, c) in l?.chars().enumerate() {
-            mode.parse(c, ln + 1, cn + 1, &mut token, &mut tokens);
+            mode.dispatch(c, ln + 1, cn + 1, &mut token, &mut tokens);
         }
     }
+    mode.dispatch_before_eol(token, &mut tokens);
 
     Ok(tokens)
 }
