@@ -4,8 +4,9 @@ use assert_cmd::Command;
 fn test_empty() {
     Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .unwrap()
-        .args(&["empty.fuz"])
+        .arg("tests/empty.fuz")
         .assert()
+        .success()
         .stdout("");
 }
 
@@ -13,7 +14,8 @@ fn test_empty() {
 fn test_12() {
     Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .unwrap()
-        .args(&["12.fuz"])
+        .arg("tests/12.fuz")
         .assert()
+        .success()
         .stdout("");
 }
