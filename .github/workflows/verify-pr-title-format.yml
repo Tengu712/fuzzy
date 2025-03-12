@@ -11,7 +11,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  verify-pr-title-format:
+  verify_pr_title_format:
     runs-on: ubuntu-latest
     steps:
       - uses: amannn/action-semantic-pull-request@v5
