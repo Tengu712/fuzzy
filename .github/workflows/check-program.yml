@@ -27,8 +27,11 @@ jobs:
       - name: Check Clippy
         run: rustup component add clippy && cargo clippy
 
-      - name: Check test
+      - name: Check unit tests
         run: cargo test
 
       - name: Check build
         run: cargo build --release
+
+      - name: Check integration tests
+        run: cd test && ./test.sh
