@@ -1,3 +1,4 @@
+mod lexer;
 mod parser;
 
 type EError = Box<dyn std::error::Error>;
@@ -16,7 +17,8 @@ fn run() -> Result<(), EError> {
     }
 
     // TODO: get tokens and pass them to evaluator.
-    let _ = parser::parse(File::open(&args[0])?);
+    let tokens = lexer::lex(File::open(&args[0])?)?;
+    let _ = parser::parse(tokens)?;
 
     Ok(())
 }

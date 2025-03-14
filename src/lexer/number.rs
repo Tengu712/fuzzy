@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn parse(s: &str) -> Option<Token> {
+pub fn lex(s: &str) -> Option<Token> {
     let splitted = s
         .char_indices()
         .rev()
@@ -27,37 +27,37 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_parse_0_to_i32() {
-        assert_eq!(parse("0"), Some(Token::I32(0)));
+    fn test_lex_0_to_i32() {
+        assert_eq!(lex("0"), Some(Token::I32(0)));
     }
 
     #[test]
-    fn test_parse_minus1_to_i32() {
-        assert_eq!(parse("-1"), Some(Token::I32(-1)));
+    fn test_lex_minus1_to_i32() {
+        assert_eq!(lex("-1"), Some(Token::I32(-1)));
     }
 
     #[test]
-    fn test_parse_2147483648_not_number() {
-        assert_eq!(parse("2147483648"), None);
+    fn test_lex_2147483648_not_number() {
+        assert_eq!(lex("2147483648"), None);
     }
 
     #[test]
-    fn test_parse_2147483648u32_to_u32() {
-        assert_eq!(parse("2147483648u32"), Some(Token::U32(2147483648)));
+    fn test_lex_2147483648u32_to_u32() {
+        assert_eq!(lex("2147483648u32"), Some(Token::U32(2147483648)));
     }
 
     #[test]
-    fn test_parse_0u16_to_u16() {
-        assert_eq!(parse("0u16"), Some(Token::U16(0)));
+    fn test_lex_0u16_to_u16() {
+        assert_eq!(lex("0u16"), Some(Token::U16(0)));
     }
 
     #[test]
-    fn test_parse_foo_not_number() {
-        assert_eq!(parse("foo"), None);
+    fn test_lex_foo_not_number() {
+        assert_eq!(lex("foo"), None);
     }
 
     #[test]
-    fn test_parse_minusminus1_not_number() {
-        assert_eq!(parse("--1"), None);
+    fn test_lex_minusminus1_not_number() {
+        assert_eq!(lex("--1"), None);
     }
 }

@@ -1,11 +1,9 @@
-use crate::EError;
-use std::io::{BufRead, BufReader, Read};
+use crate::{EError, lexer::*};
+use std::{iter::Peekable, slice::Iter};
 
-mod number;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Dot,
+#[derive(Debug, PartialEq)]
+pub enum Expr {
+    Nil,
     I8(i8),
     U8(u8),
     I16(i16),
@@ -16,135 +14,106 @@ pub enum Token {
     U64(u64),
     I128(i128),
     U128(u128),
+    Var(String),
+    Imm(Box<Sentence>),
+    Lazy(Box<Sentence>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TokenMeta {
-    pub token: Token,
-    pub ln: usize,
-    pub cn: usize,
-}
-impl TokenMeta {
-    fn new(s: &str, ln: usize, cn: usize) -> Self {
-        if let Some(token) = number::parse(s) {
-            Self { token, ln, cn }
-        } else {
-            // TODO: parse symbol token.
-            panic!("symbol token not implemented.");
-        }
-    }
-    fn dot(ln: usize, cn: usize) -> Self {
-        Self {
-            token: Token::Dot,
-            ln,
-            cn,
-        }
-    }
-}
-
-struct TempToken {
-    s: String,
+#[derive(Debug, PartialEq)]
+pub struct ExprView {
+    expr: Expr,
     ln: usize,
     cn: usize,
 }
-impl TempToken {
-    fn new(ln: usize, cn: usize) -> Self {
+impl ExprView {
+    fn from(tokens: &mut Peekable<Iter<TokenMeta>>) -> Option<Self> {
+        match tokens.peek()?.token {
+            Token::Dot => return None,
+            _ => (),
+        }
+        let token = tokens.next()?;
+        let expr = match &token.token {
+            Token::I8(n) => Expr::I8(*n),
+            Token::U8(n) => Expr::U8(*n),
+            Token::I16(n) => Expr::I16(*n),
+            Token::U16(n) => Expr::U16(*n),
+            Token::I32(n) => Expr::I32(*n),
+            Token::U32(n) => Expr::U32(*n),
+            Token::I64(n) => Expr::I64(*n),
+            Token::U64(n) => Expr::U64(*n),
+            Token::I128(n) => Expr::I128(*n),
+            Token::U128(n) => Expr::U128(*n),
+            Token::Symbol(n) => Expr::Var(n.clone()),
+            _ => panic!("unexpected"),
+        };
+        let ln = token.ln;
+        let cn = token.cn;
+        Some(Self { expr, ln, cn })
+    }
+
+    fn nil(ln: usize, cn: usize) -> Self {
         Self {
-            s: String::new(),
+            expr: Expr::Nil,
             ln,
             cn,
         }
     }
 }
 
-enum Mode {
-    Blank,
-    Token,
+#[derive(Debug, PartialEq)]
+pub struct Sentence {
+    pub subject: ExprView,
+    pub verb: Option<ExprView>,
+    pub objects: Vec<ExprView>,
 }
-impl Mode {
-    fn dispatch(
-        &mut self,
-        c: char,
-        ln: usize,
-        cn: usize,
-        token: &mut TempToken,
-        tokens: &mut Vec<TokenMeta>,
-    ) {
-        match self {
-            Mode::Blank => match c {
-                ' ' | '\t' => (),
-                '.' => tokens.push(TokenMeta::dot(ln, cn)),
-                _ => {
-                    *token = TempToken::new(ln, cn);
-                    token.s.push(c);
-                    *self = Mode::Token;
-                }
-            },
-            Mode::Token => match c {
-                ' ' | '\t' | '.' => {
-                    tokens.push(TokenMeta::new(&token.s, token.ln, token.cn));
-                    if c == '.' {
-                        tokens.push(TokenMeta::dot(ln, cn));
-                    }
-                    *self = Mode::Blank;
-                }
-                _ => token.s.push(c),
-            },
+impl Sentence {
+    fn from(tokens: &mut Peekable<Iter<TokenMeta>>) -> Option<Self> {
+        let subject = ExprView::from(tokens)?;
+        let verb = ExprView::from(tokens);
+        let mut objects = Vec::new();
+        while let Some(n) = ExprView::from(tokens) {
+            objects.push(n);
         }
+        Some(Self {
+            subject,
+            verb,
+            objects,
+        })
     }
 
-    fn dispatch_before_eol(self, token: TempToken, tokens: &mut Vec<TokenMeta>) {
-        match self {
-            Mode::Token => tokens.push(TokenMeta::new(&token.s, token.ln, token.cn)),
-            _ => (),
+    fn nil(ln: usize, cn: usize) -> Self {
+        Self {
+            subject: ExprView::nil(ln, cn),
+            verb: None,
+            objects: Vec::new(),
         }
     }
 }
 
-pub fn parse<R: Read>(content: R) -> Result<Vec<TokenMeta>, EError> {
-    let mut mode = Mode::Blank;
-    let mut token = TempToken {
-        s: String::new(),
-        ln: 0,
-        cn: 0,
-    };
-    let mut tokens = Vec::new();
-
-    for (ln, l) in BufReader::new(content).lines().enumerate() {
-        for (cn, c) in l?.chars().enumerate() {
-            mode.dispatch(c, ln + 1, cn + 1, &mut token, &mut tokens);
+pub fn parse(tokens: Vec<TokenMeta>) -> Result<Vec<Sentence>, EError> {
+    let mut sentences = Vec::new();
+    let mut tokens = tokens.iter().peekable();
+    let mut dot = None;
+    while let Some(n) = Sentence::from(&mut tokens) {
+        sentences.push(n);
+        match tokens.peek() {
+            Some(token) if token.token == Token::Dot => {
+                dot = Some((token.ln, token.cn));
+                tokens.next();
+            }
+            // TODO: what is this case?
+            Some(_) => panic!("unexpected"),
+            None => dot = None,
         }
     }
-    mode.dispatch_before_eol(token, &mut tokens);
-
-    Ok(tokens)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_parse_empty() {
-        assert_eq!(parse("".as_bytes()).unwrap(), Vec::new());
+    if let Some((ln, cn)) = dot {
+        sentences.push(Sentence::nil(ln, cn));
     }
-
-    #[test]
-    fn test_parse_12() {
-        assert_eq!(
-            parse("12.".as_bytes()).unwrap(),
-            Vec::from(&[
-                TokenMeta {
-                    token: Token::I32(12),
-                    ln: 1,
-                    cn: 1
-                },
-                TokenMeta {
-                    token: Token::Dot,
-                    ln: 1,
-                    cn: 3
-                }
-            ])
-        );
+    if let Some(n) = tokens.next() {
+        let ln = n.ln;
+        let cn = n.cn;
+        Err(format!("syntax error: unexpected token found: {ln} line, {cn} char.",).into())
+    } else {
+        Ok(sentences)
     }
 }
