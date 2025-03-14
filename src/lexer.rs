@@ -20,21 +20,18 @@ pub enum Token {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TokenMeta {
+pub struct TokenView {
     pub token: Token,
     pub ln: usize,
     pub cn: usize,
 }
-impl TokenMeta {
+impl TokenView {
     fn new(s: &str, ln: usize, cn: usize) -> Self {
         if let Some(token) = number::lex(s) {
             Self { token, ln, cn }
         } else {
-            Self {
-                token: Token::Symbol(s.to_string()),
-                ln,
-                cn,
-            }
+            let token = Token::Symbol(s.to_string());
+            Self { token, ln, cn }
         }
     }
 
@@ -73,12 +70,12 @@ impl Mode {
         ln: usize,
         cn: usize,
         token: &mut TempToken,
-        tokens: &mut Vec<TokenMeta>,
+        tokens: &mut Vec<TokenView>,
     ) {
         match self {
             Mode::Blank => match c {
                 ' ' | '\t' => (),
-                '.' => tokens.push(TokenMeta::dot(ln, cn)),
+                '.' => tokens.push(TokenView::dot(ln, cn)),
                 _ => {
                     *token = TempToken::new(ln, cn);
                     token.s.push(c);
@@ -87,9 +84,9 @@ impl Mode {
             },
             Mode::Token => match c {
                 ' ' | '\t' | '.' => {
-                    tokens.push(TokenMeta::new(&token.s, token.ln, token.cn));
+                    tokens.push(TokenView::new(&token.s, token.ln, token.cn));
                     if c == '.' {
-                        tokens.push(TokenMeta::dot(ln, cn));
+                        tokens.push(TokenView::dot(ln, cn));
                     }
                     *self = Mode::Blank;
                 }
@@ -98,30 +95,31 @@ impl Mode {
         }
     }
 
-    fn dispatch_before_eol(self, token: TempToken, tokens: &mut Vec<TokenMeta>) {
+    fn dispatch_before_eol(&self, _: &TempToken, _: &mut Vec<TokenView>) {
         match self {
-            Mode::Token => tokens.push(TokenMeta::new(&token.s, token.ln, token.cn)),
+            _ => (),
+        }
+    }
+
+    fn dispatch_before_eof(&self, token: &TempToken, tokens: &mut Vec<TokenView>) {
+        match self {
+            Mode::Token => tokens.push(TokenView::new(&token.s, token.ln, token.cn)),
             _ => (),
         }
     }
 }
 
-pub fn lex<R: Read>(content: R) -> Result<Vec<TokenMeta>, EError> {
+pub fn lex<R: Read>(content: R) -> Result<Vec<TokenView>, EError> {
     let mut mode = Mode::Blank;
-    let mut token = TempToken {
-        s: String::new(),
-        ln: 0,
-        cn: 0,
-    };
+    let mut token = TempToken::new(0, 0);
     let mut tokens = Vec::new();
-
     for (ln, l) in BufReader::new(content).lines().enumerate() {
         for (cn, c) in l?.chars().enumerate() {
             mode.dispatch(c, ln + 1, cn + 1, &mut token, &mut tokens);
         }
+        mode.dispatch_before_eol(&token, &mut tokens);
     }
-    mode.dispatch_before_eol(token, &mut tokens);
-
+    mode.dispatch_before_eof(&token, &mut tokens);
     Ok(tokens)
 }
 
@@ -139,12 +137,12 @@ mod test {
         assert_eq!(
             lex("12.".as_bytes()).unwrap(),
             Vec::from(&[
-                TokenMeta {
+                TokenView {
                     token: Token::I32(12),
                     ln: 1,
                     cn: 1
                 },
-                TokenMeta {
+                TokenView {
                     token: Token::Dot,
                     ln: 1,
                     cn: 3

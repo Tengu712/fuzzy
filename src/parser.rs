@@ -26,7 +26,7 @@ pub struct ExprView {
     cn: usize,
 }
 impl ExprView {
-    fn from(tokens: &mut Peekable<Iter<TokenMeta>>) -> Option<Self> {
+    fn from(tokens: &mut Peekable<Iter<TokenView>>) -> Option<Self> {
         match tokens.peek()?.token {
             Token::Dot => return None,
             _ => (),
@@ -67,7 +67,7 @@ pub struct Sentence {
     pub objects: Vec<ExprView>,
 }
 impl Sentence {
-    fn from(tokens: &mut Peekable<Iter<TokenMeta>>) -> Option<Self> {
+    fn from(tokens: &mut Peekable<Iter<TokenView>>) -> Option<Self> {
         let subject = ExprView::from(tokens)?;
         let verb = ExprView::from(tokens);
         let mut objects = Vec::new();
@@ -90,7 +90,7 @@ impl Sentence {
     }
 }
 
-pub fn parse(tokens: Vec<TokenMeta>) -> Result<Vec<Sentence>, EError> {
+pub fn parse(tokens: Vec<TokenView>) -> Result<Vec<Sentence>, EError> {
     let mut sentences = Vec::new();
     let mut tokens = tokens.iter().peekable();
     let mut dot = None;
