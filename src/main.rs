@@ -4,7 +4,7 @@ mod parser;
 type EError = Box<dyn std::error::Error>;
 
 fn run() -> Result<(), EError> {
-    use std::{env, fs::File};
+    use std::{env, fs};
 
     let args = env::args().skip(1).collect::<Vec<String>>();
 
@@ -17,7 +17,7 @@ fn run() -> Result<(), EError> {
     }
 
     // TODO: get tokens and pass them to evaluator.
-    let tokens = lexer::lex(File::open(&args[0])?)?;
+    let tokens = lexer::lex(fs::read_to_string(args[0].to_string())?);
     let _ = parser::parse(tokens)?;
 
     Ok(())

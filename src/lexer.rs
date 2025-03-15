@@ -1,10 +1,3 @@
-use crate::EError;
-use std::{
-    io::{BufRead, BufReader, Read},
-    iter::Peekable,
-    str::CharIndices,
-};
-
 mod number;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,69 +31,83 @@ pub struct TokenView {
     pub cn: usize,
 }
 
-fn eat(chars: &mut Peekable<CharIndices>, ln: usize) -> Vec<TokenView> {
-    // skip blank
-    while let Some((_, c)) = chars.peek() {
-        match c {
-            ' ' | '\t' => (),
-            _ => break,
-        }
-        chars.next();
+pub fn lex(code: String) -> Vec<TokenView> {
+    Lexer {
+        code,
+        idx: 0,
+        ln: 1,
+        cn: 1,
     }
-
-    // check next
-    let Some(next) = chars.peek() else {
-        return Vec::new();
-    };
-
-    // lex token
-    let cn = next.0 + 1;
-    let mut buf = String::new();
-    while let Some((_, c)) = chars.next() {
-        match c {
-            ' ' | '\t' => break,
-            _ => buf.push(c),
-        }
-    }
-
-    // prepare
-    let mut tokens = Vec::new();
-
-    // pop tail .
-    while !buf.is_empty() {
-        if buf.ends_with(".") {
-            tokens.push(TokenView {
-                token: Token::from(buf.pop().unwrap().to_string()),
-                ln,
-                cn: cn + buf.len(),
-            });
-        } else {
-            break;
-        }
-    }
-
-    // finish
-    if !buf.is_empty() {
-        tokens.push(TokenView {
-            token: Token::from(buf),
-            ln,
-            cn,
-        });
-    }
-    tokens.reverse();
-    tokens
+    .lex()
 }
 
-pub fn lex<R: Read>(content: R) -> Result<Vec<TokenView>, EError> {
-    let mut tokens = Vec::new();
-    for (ln, l) in BufReader::new(content).lines().enumerate() {
-        let l = l?;
-        let mut chars = l.char_indices().peekable();
-        while chars.peek().is_some() {
-            tokens.append(&mut eat(&mut chars, ln + 1));
+struct Lexer {
+    code: String,
+    idx: usize,
+    ln: usize,
+    cn: usize,
+}
+impl Lexer {
+    fn lex(mut self) -> Vec<TokenView> {
+        let mut tokens = Vec::new();
+        while self.idx < self.code.len() {
+            self.eat_blank();
+            tokens.append(&mut self.eat_token());
+        }
+        tokens
+    }
+
+    fn eat_blank(&mut self) {
+        while let Some(c) = self.code.chars().nth(self.idx) {
+            match c {
+                ' ' | '\t' => {
+                    self.idx += 1;
+                    self.cn += 1;
+                }
+                '\r' | '\n' => {
+                    self.idx += 1;
+                    self.ln += 1;
+                    self.cn = 1;
+                }
+                _ => break,
+            }
         }
     }
-    Ok(tokens)
+
+    fn eat_token(&mut self) -> Vec<TokenView> {
+        let ln = self.ln;
+        let cn = self.cn;
+        let mut buf = String::new();
+        while let Some(c) = self.code.chars().nth(self.idx) {
+            match c {
+                ' ' | '\t' | '\r' | '\n' => break,
+                _ => {
+                    buf.push(c);
+                    self.idx += 1;
+                    self.cn += 1;
+                }
+            }
+        }
+        let mut tokens = Vec::new();
+        while !buf.is_empty() {
+            if buf.ends_with(".") {
+                tokens.push(TokenView {
+                    token: Token::from(buf.pop().unwrap().to_string()),
+                    ln,
+                    cn: cn + buf.len(),
+                });
+            } else {
+                tokens.push(TokenView {
+                    token: Token::from(buf),
+                    ln,
+                    cn,
+                });
+                break;
+            }
+        }
+        tokens.reverse();
+        tokens
+    }
 }
 
 #[cfg(test)]
@@ -109,13 +116,13 @@ mod test {
 
     #[test]
     fn test_lex_empty() {
-        assert_eq!(lex("".as_bytes()).unwrap(), Vec::new());
+        assert_eq!(lex("".to_string()), Vec::new());
     }
 
     #[test]
     fn test_lex_12() {
         assert_eq!(
-            lex("12.".as_bytes()).unwrap(),
+            lex("12.".to_string()),
             Vec::from(&[
                 TokenView {
                     token: Token::I32(12),
@@ -134,7 +141,7 @@ mod test {
     #[test]
     fn test_lex_foo_dot_minus254i16_dot_dot_bar() {
         assert_eq!(
-            lex(" foo   .  -254i16..  \n\nbar \n".as_bytes()).unwrap(),
+            lex(" foo   .  -254i16..  \n\nbar \n".to_string()),
             Vec::from(&[
                 TokenView {
                     token: Token::Symbol("foo".to_string()),
