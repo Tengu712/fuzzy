@@ -1,5 +1,4 @@
 use crate::{EError, lexer::*};
-use std::{iter::Peekable, slice::Iter};
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
@@ -15,8 +14,7 @@ pub enum Expr {
     I128(i128),
     U128(u128),
     Var(String),
-    Imm(Box<Sentence>),
-    Lazy(Box<Sentence>),
+    Imm(Vec<Sentence>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,14 +23,61 @@ pub struct ExprView {
     ln: usize,
     cn: usize,
 }
-impl ExprView {
-    fn from(tokens: &mut Peekable<Iter<TokenView>>) -> Option<Self> {
-        match tokens.peek()?.token {
-            Token::Dot => return None,
-            _ => (),
+
+#[derive(Debug, PartialEq)]
+pub struct Sentence {
+    pub subject: ExprView,
+    pub verb: Option<ExprView>,
+    pub objects: Vec<ExprView>,
+}
+
+pub fn parse(tokens: Vec<TokenView>) -> Result<ExprView, EError> {
+    let mut parser = Parser { tokens, idx: 0 };
+    let sentences = parser.parse_block();
+    if parser.is_end() {
+        Ok(ExprView {
+            expr: Expr::Imm(sentences),
+            ln: 1,
+            cn: 1,
+        })
+    } else {
+        // TODO: write better message.
+        Err("unexpected".into())
+    }
+}
+
+struct Parser {
+    tokens: Vec<TokenView>,
+    idx: usize,
+}
+impl Parser {
+    fn parse_block(&mut self) -> Vec<Sentence> {
+        let mut sentences = Vec::new();
+        while let Some(n) = self.parse_sentence() {
+            sentences.push(n);
+            if self.parse_dot().is_none() {
+                break;
+            }
         }
-        let token = tokens.next()?;
-        let expr = match &token.token {
+        sentences
+    }
+
+    fn parse_sentence(&mut self) -> Option<Sentence> {
+        let subject = self.parse_expr()?;
+        let verb = self.parse_expr();
+        let mut objects = Vec::new();
+        while let Some(n) = self.parse_expr() {
+            objects.push(n);
+        }
+        Some(Sentence {
+            subject,
+            verb,
+            objects,
+        })
+    }
+
+    fn parse_expr(&mut self) -> Option<ExprView> {
+        let expr = match &self.tokens.get(self.idx)?.token {
             Token::I8(n) => Expr::I8(*n),
             Token::U8(n) => Expr::U8(*n),
             Token::I16(n) => Expr::I16(*n),
@@ -44,76 +89,25 @@ impl ExprView {
             Token::I128(n) => Expr::I128(*n),
             Token::U128(n) => Expr::U128(*n),
             Token::Symbol(n) => Expr::Var(n.clone()),
-            _ => panic!("unexpected"),
+            _ => return None,
         };
-        let ln = token.ln;
-        let cn = token.cn;
-        Some(Self { expr, ln, cn })
+        let ln = self.tokens[self.idx].ln;
+        let cn = self.tokens[self.idx].cn;
+        self.idx += 1;
+        Some(ExprView { expr, ln, cn })
     }
 
-    fn nil(ln: usize, cn: usize) -> Self {
-        Self {
-            expr: Expr::Nil,
-            ln,
-            cn,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Sentence {
-    pub subject: ExprView,
-    pub verb: Option<ExprView>,
-    pub objects: Vec<ExprView>,
-}
-impl Sentence {
-    fn from(tokens: &mut Peekable<Iter<TokenView>>) -> Option<Self> {
-        let subject = ExprView::from(tokens)?;
-        let verb = ExprView::from(tokens);
-        let mut objects = Vec::new();
-        while let Some(n) = ExprView::from(tokens) {
-            objects.push(n);
-        }
-        Some(Self {
-            subject,
-            verb,
-            objects,
-        })
-    }
-
-    fn nil(ln: usize, cn: usize) -> Self {
-        Self {
-            subject: ExprView::nil(ln, cn),
-            verb: None,
-            objects: Vec::new(),
-        }
-    }
-}
-
-pub fn parse(tokens: Vec<TokenView>) -> Result<Vec<Sentence>, EError> {
-    let mut sentences = Vec::new();
-    let mut tokens = tokens.iter().peekable();
-    let mut dot = None;
-    while let Some(n) = Sentence::from(&mut tokens) {
-        sentences.push(n);
-        match tokens.peek() {
-            Some(token) if token.token == Token::Dot => {
-                dot = Some((token.ln, token.cn));
-                tokens.next();
+    fn parse_dot(&mut self) -> Option<()> {
+        match self.tokens.get(self.idx)?.token {
+            Token::Dot => {
+                self.idx += 1;
+                Some(())
             }
-            // TODO: what is this case?
-            Some(_) => panic!("unexpected"),
-            None => dot = None,
+            _ => None,
         }
     }
-    if let Some((ln, cn)) = dot {
-        sentences.push(Sentence::nil(ln, cn));
-    }
-    if let Some(n) = tokens.next() {
-        let ln = n.ln;
-        let cn = n.cn;
-        Err(format!("syntax error: unexpected token found: {ln} line, {cn} char.",).into())
-    } else {
-        Ok(sentences)
+
+    fn is_end(&self) -> bool {
+        self.idx >= self.tokens.len()
     }
 }
