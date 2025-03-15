@@ -53,11 +53,26 @@ struct Parser {
 impl Parser {
     fn parse_block(&mut self) -> Vec<Sentence> {
         let mut sentences = Vec::new();
+        let mut dotpos = None;
         while let Some(n) = self.parse_sentence() {
             sentences.push(n);
-            if self.parse_dot().is_none() {
+            if let Some(n) = self.parse_dot() {
+                dotpos = Some(n);
+            } else {
+                dotpos = None;
                 break;
             }
+        }
+        if let Some((ln, cn)) = dotpos {
+            sentences.push(Sentence {
+                subject: ExprView {
+                    expr: Expr::Nil,
+                    ln,
+                    cn,
+                },
+                verb: None,
+                objects: Vec::new(),
+            });
         }
         sentences
     }
@@ -97,11 +112,15 @@ impl Parser {
         Some(ExprView { expr, ln, cn })
     }
 
-    fn parse_dot(&mut self) -> Option<()> {
-        match self.tokens.get(self.idx)?.token {
-            Token::Dot => {
+    fn parse_dot(&mut self) -> Option<(usize, usize)> {
+        match self.tokens.get(self.idx)? {
+            TokenView {
+                token: Token::Dot,
+                ln,
+                cn,
+            } => {
                 self.idx += 1;
-                Some(())
+                Some((*ln, *cn))
             }
             _ => None,
         }
