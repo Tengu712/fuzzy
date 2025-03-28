@@ -1,3 +1,5 @@
+mod lexer;
+
 use std::error::Error;
 
 type RResult<T> = Result<T, Box<dyn Error>>;
