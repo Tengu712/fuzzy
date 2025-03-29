@@ -13,13 +13,16 @@ fn run() -> RResult<()> {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
+        let input = input.trim_end();
 
-        // TODO: *exit* @
-        if input.trim() == "*exit*" {
-            break;
+        let tokens = lexer::lex(input)?;
+
+        match tokens.get(0) {
+            Some(lexer::Token::Symbol(n)) if n == "#exit" => break,
+            _ => (),
         }
 
-        println!("{input}");
+        println!("{:?}", tokens);
     }
 
     Ok(())
