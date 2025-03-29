@@ -3,16 +3,20 @@ use crate::*;
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub enum Token {
+    Dot,
     Symbol(String),
 }
 impl Token {
     fn from(s: &str) -> Self {
-        Self::Symbol(s.to_string())
+        match s {
+            "." => Self::Dot,
+            _ => Self::Symbol(s.to_string()),
+        }
     }
 }
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
-    let tokens = Regex::new(r#""[^"]*"|\S+"#)?
+    let tokens = Regex::new(r#""[^"]*"|[^\s\.]+|\."#)?
         .find_iter(code)
         .map(|n| Token::from(n.as_str()))
         .collect::<Vec<Token>>();

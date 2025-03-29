@@ -4,4 +4,5 @@ expression: tokens
 ---
 - Symbol: "12"
 - Symbol: "->"
-- Symbol: twelve.
+- Symbol: twelve
+- Dot
