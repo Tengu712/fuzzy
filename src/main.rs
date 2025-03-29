@@ -1,3 +1,4 @@
+mod evaluator;
 mod lexer;
 
 use std::error::Error;
@@ -16,13 +17,11 @@ fn run() -> RResult<()> {
         let input = input.trim_end();
 
         let tokens = lexer::lex(input)?;
-
         match tokens.first() {
             Some(lexer::Token::Symbol(n)) if n == "#exit" => break,
             _ => (),
         }
-
-        println!("{:?}", tokens);
+        evaluator::eval(&tokens)?;
     }
 
     Ok(())
