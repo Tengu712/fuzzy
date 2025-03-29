@@ -1,0 +1,8 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- Symbol: "12"
+- Symbol: "->"
+- Symbol: twelve
+- Dot
