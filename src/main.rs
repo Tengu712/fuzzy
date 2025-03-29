@@ -17,7 +17,7 @@ fn run() -> RResult<()> {
 
         let tokens = lexer::lex(input)?;
 
-        match tokens.get(0) {
+        match tokens.first() {
             Some(lexer::Token::Symbol(n)) if n == "#exit" => break,
             _ => (),
         }

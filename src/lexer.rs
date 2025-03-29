@@ -1,5 +1,5 @@
-use regex::Regex;
 use crate::*;
+use regex::Regex;
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub enum Token {
