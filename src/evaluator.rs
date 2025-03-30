@@ -8,7 +8,13 @@ pub fn eval(tokens: &Vec<Token>) -> RResult<()> {
         index: 0,
         stack: Vec::new(),
     };
-    Ok(())
+    eval_block(&mut env)?;
+    if env.index >= env.tokens.len() {
+        println!("{:?}", env.stack.last().unwrap());
+        Ok(())
+    } else {
+        Err("error: some tokens not evaluated.".into())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,10 +40,20 @@ struct Environment<'a> {
     stack: Vec<Value>,
 }
 
-fn eval_block(tokens: &mut Environment) -> RResult<()> {
+fn eval_block(env: &mut Environment) -> RResult<()> {
+    eval_sentence(env)?;
     Ok(())
 }
 
-fn eval_sentence(tokens: &mut Environment) -> RResult<()> {
+fn eval_sentence(env: &mut Environment) -> RResult<()> {
+    eval_expression(env)?;
+    Ok(())
+}
+
+fn eval_expression(env: &mut Environment) -> RResult<()> {
+    match env.tokens.get(env.index) {
+        None => env.stack.push(Value::Nil),
+        _ => panic!("not implemented"),
+    }
     Ok(())
 }
