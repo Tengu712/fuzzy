@@ -53,7 +53,14 @@ fn eval_sentence(env: &mut Environment) -> RResult<()> {
 fn eval_expression(env: &mut Environment) -> RResult<()> {
     match env.tokens.get(env.index) {
         None => env.stack.push(Value::Nil),
-        _ => panic!("not implemented"),
+        Some(n) => {
+            if let Some(n) = number::parse(&n) {
+                env.stack.push(n);
+                env.index += 1;
+            } else {
+                return Err(format!("error: invalid token found: {:?}", n).into());
+            }
+        }
     }
     Ok(())
 }
