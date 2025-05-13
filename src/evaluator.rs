@@ -57,7 +57,7 @@ struct Environment {
 pub fn eval(tokens: Vec<Token>) -> RResult<Value> {
     let mut env = Environment {
         tokens,
-        fn_map: HashMap::new(), // TODO: setup.
+        fn_map: function::setup(),
     };
     let value = eval_block(&mut env)?;
     if env.tokens.is_empty() {
@@ -152,7 +152,7 @@ mod test {
     fn test_not_symbol_not_function() {
         let mut env = Environment {
             tokens: Vec::new(),
-            fn_map: HashMap::new(),
+            fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
         applicate(&mut env, &mut values).unwrap_err();
@@ -162,7 +162,7 @@ mod test {
     fn test_undefined_function() {
         let mut env = Environment {
             tokens: Vec::new(),
-            fn_map: HashMap::new(),
+            fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
         applicate(&mut env, &mut values).unwrap_err();
