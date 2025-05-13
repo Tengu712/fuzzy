@@ -37,7 +37,6 @@ fn split_trailing_signs(s: &str) -> Vec<&str> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use insta;
 
     #[test]
     fn test_oneline() {

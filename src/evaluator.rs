@@ -54,7 +54,7 @@ fn eval_expression(env: &mut Environment) -> RResult<()> {
     match env.tokens.get(env.index) {
         None => env.stack.push(Value::Nil),
         Some(n) => {
-            if let Some(n) = number::parse(&n) {
+            if let Some(n) = number::parse(n) {
                 env.stack.push(n);
                 env.index += 1;
             } else {
