@@ -19,3 +19,22 @@ fn test_float() {
         .success()
         .stdout(">> F32(1.2)\n>> ");
 }
+
+#[test]
+fn test_add_type_missmatch() {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .write_stdin("1.2f32 + 123\n#exit\n")
+        .assert()
+        .failure();
+}
+
+#[test]
+fn test_expression() {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .write_stdin("2 * 3 + 4\n#exit\n")
+        .assert()
+        .success()
+        .stdout(">> I32(14)\n>> ");
+}

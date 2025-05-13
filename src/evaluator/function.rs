@@ -27,6 +27,45 @@ pub fn setup() -> HashMap<String, HashMap<String, Function>> {
     f32_map.insert("+".to_string(), Function::Builtin(f32_add));
     f64_map.insert("+".to_string(), Function::Builtin(f64_add));
 
+    i8_map.insert("-".to_string(), Function::Builtin(i8_sub));
+    u8_map.insert("-".to_string(), Function::Builtin(u8_sub));
+    i16_map.insert("-".to_string(), Function::Builtin(i16_sub));
+    u16_map.insert("-".to_string(), Function::Builtin(u16_sub));
+    i32_map.insert("-".to_string(), Function::Builtin(i32_sub));
+    u32_map.insert("-".to_string(), Function::Builtin(u32_sub));
+    i64_map.insert("-".to_string(), Function::Builtin(i64_sub));
+    u64_map.insert("-".to_string(), Function::Builtin(u64_sub));
+    i128_map.insert("-".to_string(), Function::Builtin(i128_sub));
+    u128_map.insert("-".to_string(), Function::Builtin(u128_sub));
+    f32_map.insert("-".to_string(), Function::Builtin(f32_sub));
+    f64_map.insert("-".to_string(), Function::Builtin(f64_sub));
+
+    i8_map.insert("*".to_string(), Function::Builtin(i8_mul));
+    u8_map.insert("*".to_string(), Function::Builtin(u8_mul));
+    i16_map.insert("*".to_string(), Function::Builtin(i16_mul));
+    u16_map.insert("*".to_string(), Function::Builtin(u16_mul));
+    i32_map.insert("*".to_string(), Function::Builtin(i32_mul));
+    u32_map.insert("*".to_string(), Function::Builtin(u32_mul));
+    i64_map.insert("*".to_string(), Function::Builtin(i64_mul));
+    u64_map.insert("*".to_string(), Function::Builtin(u64_mul));
+    i128_map.insert("*".to_string(), Function::Builtin(i128_mul));
+    u128_map.insert("*".to_string(), Function::Builtin(u128_mul));
+    f32_map.insert("*".to_string(), Function::Builtin(f32_mul));
+    f64_map.insert("*".to_string(), Function::Builtin(f64_mul));
+
+    i8_map.insert("/".to_string(), Function::Builtin(i8_div));
+    u8_map.insert("/".to_string(), Function::Builtin(u8_div));
+    i16_map.insert("/".to_string(), Function::Builtin(i16_div));
+    u16_map.insert("/".to_string(), Function::Builtin(u16_div));
+    i32_map.insert("/".to_string(), Function::Builtin(i32_div));
+    u32_map.insert("/".to_string(), Function::Builtin(u32_div));
+    i64_map.insert("/".to_string(), Function::Builtin(i64_div));
+    u64_map.insert("/".to_string(), Function::Builtin(u64_div));
+    i128_map.insert("/".to_string(), Function::Builtin(i128_div));
+    u128_map.insert("/".to_string(), Function::Builtin(u128_div));
+    f32_map.insert("/".to_string(), Function::Builtin(f32_div));
+    f64_map.insert("/".to_string(), Function::Builtin(f64_div));
+
     HashMap::from([
         ("i8".to_string(), i8_map),
         ("u8".to_string(), u8_map),
@@ -79,3 +118,42 @@ define_numeric_function!(i128_add, "i128:+", +, I128, i128);
 define_numeric_function!(u128_add, "u128:+", +, U128, u128);
 define_numeric_function!(f32_add, "f32:+", +, F32, f32);
 define_numeric_function!(f64_add, "f64:+", +, F64, f64);
+
+define_numeric_function!(i8_sub, "i8:-", -, I8, i8);
+define_numeric_function!(u8_sub, "u8:-", -, U8, u8);
+define_numeric_function!(i16_sub, "i16:-", -, I16, i16);
+define_numeric_function!(u16_sub, "u16:-", -, U16, u16);
+define_numeric_function!(i32_sub, "i32:-", -, I32, i32);
+define_numeric_function!(u32_sub, "u32:-", -, U32, u32);
+define_numeric_function!(i64_sub, "i64:-", -, I64, i64);
+define_numeric_function!(u64_sub, "u64:-", -, U64, u64);
+define_numeric_function!(i128_sub, "i128:-", -, I128, i128);
+define_numeric_function!(u128_sub, "u128:-", -, U128, u128);
+define_numeric_function!(f32_sub, "f32:-", -, F32, f32);
+define_numeric_function!(f64_sub, "f64:-", -, F64, f64);
+
+define_numeric_function!(i8_mul, "i8:*", *, I8, i8);
+define_numeric_function!(u8_mul, "u8:*", *, U8, u8);
+define_numeric_function!(i16_mul, "i16:*", *, I16, i16);
+define_numeric_function!(u16_mul, "u16:*", *, U16, u16);
+define_numeric_function!(i32_mul, "i32:*", *, I32, i32);
+define_numeric_function!(u32_mul, "u32:*", *, U32, u32);
+define_numeric_function!(i64_mul, "i64:*", *, I64, i64);
+define_numeric_function!(u64_mul, "u64:*", *, U64, u64);
+define_numeric_function!(i128_mul, "i128:*", *, I128, i128);
+define_numeric_function!(u128_mul, "u128:*", *, U128, u128);
+define_numeric_function!(f32_mul, "f32:*", *, F32, f32);
+define_numeric_function!(f64_mul, "f64:*", *, F64, f64);
+
+define_numeric_function!(i8_div, "i8:/", /, I8, i8);
+define_numeric_function!(u8_div, "u8:/", /, U8, u8);
+define_numeric_function!(i16_div, "i16:/", /, I16, i16);
+define_numeric_function!(u16_div, "u16:/", /, U16, u16);
+define_numeric_function!(i32_div, "i32:/", /, I32, i32);
+define_numeric_function!(u32_div, "u32:/", /, U32, u32);
+define_numeric_function!(i64_div, "i64:/", /, I64, i64);
+define_numeric_function!(u64_div, "u64:/", /, U64, u64);
+define_numeric_function!(i128_div, "i128:/", /, I128, i128);
+define_numeric_function!(u128_div, "u128:/", /, U128, u128);
+define_numeric_function!(f32_div, "f32:/", /, F32, f32);
+define_numeric_function!(f64_div, "f64:/", /, F64, f64);
