@@ -74,7 +74,7 @@ mod test {
     #[test]
     fn test_parse_u64() {
         let n = Faker.fake::<u64>();
-        assert_eq!(parse("{n}u64"), Some(Value::U64(n)));
+        assert_eq!(parse(&format!("{n}u64")), Some(Value::U64(n)));
     }
 
     #[test]

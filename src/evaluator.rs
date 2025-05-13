@@ -1,24 +1,11 @@
+mod function;
 mod number;
 
 use crate::{lexer::*, *};
-
-pub fn eval(tokens: &Vec<Token>) -> RResult<()> {
-    let mut env = Environment {
-        tokens,
-        index: 0,
-        stack: Vec::new(),
-    };
-    eval_block(&mut env)?;
-    if env.index >= env.tokens.len() {
-        println!("{:?}", env.stack.last().unwrap());
-        Ok(())
-    } else {
-        Err("error: some tokens not evaluated.".into())
-    }
-}
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-enum Value {
+pub enum Value {
     Nil,
     I8(i8),
     U8(u8),
@@ -35,45 +22,149 @@ enum Value {
     Symbol(String),
 }
 
-struct Environment<'a> {
-    tokens: &'a Vec<Token>,
-    index: usize,
-    stack: Vec<Value>,
-}
-
-fn eval_block(env: &mut Environment) -> RResult<()> {
-    eval_sentence(env)?;
-    Ok(())
-}
-
-fn eval_sentence(env: &mut Environment) -> RResult<()> {
-    while !is_sentence_end(env) {
-        eval_expression(env)?;
-    }
-    println!("{:?}", env.stack);
-    Ok(())
-}
-
-fn eval_expression(env: &mut Environment) -> RResult<()> {
-    match env.tokens.get(env.index) {
-        None => env.stack.push(Value::Nil),
-        Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
-        Some(Token::Symbol(n)) => {
-            if let Some(n) = number::parse(n) {
-                env.stack.push(n);
-            } else {
-                env.stack.push(Value::Symbol(n.to_string()));
-            }
-            env.index += 1;
+impl Value {
+    fn get_typeid(&self, _: &Environment) -> String {
+        match self {
+            Self::Nil => "nil".to_string(),
+            Self::I8(_) => "i8".to_string(),
+            Self::U8(_) => "u8".to_string(),
+            Self::I16(_) => "i16".to_string(),
+            Self::U16(_) => "u16".to_string(),
+            Self::I32(_) => "i32".to_string(),
+            Self::U32(_) => "u32".to_string(),
+            Self::I64(_) => "i64".to_string(),
+            Self::U64(_) => "u64".to_string(),
+            Self::I128(_) => "i128".to_string(),
+            Self::U128(_) => "u128".to_string(),
+            Self::F32(_) => "f32".to_string(),
+            Self::F64(_) => "f64".to_string(),
+            // TODO: get variable type.
+            Self::Symbol(_) => panic!("unimplemented"),
         }
     }
+}
+
+enum Function {
+    Builtin(fn(Value, &mut Vec<Value>) -> RResult<()>),
+}
+
+struct Environment {
+    tokens: Vec<Token>,
+    fn_map: HashMap<String, HashMap<String, Function>>,
+    // TODO: add variable.
+}
+
+pub fn eval(tokens: Vec<Token>) -> RResult<Value> {
+    let mut env = Environment {
+        tokens,
+        fn_map: HashMap::new(), // TODO: setup.
+    };
+    let value = eval_block(&mut env)?;
+    if env.tokens.is_empty() {
+        Ok(value)
+    } else {
+        Err("error: some tokens not evaluated.".into())
+    }
+}
+
+fn eval_block(env: &mut Environment) -> RResult<Value> {
+    loop {
+        let value = eval_sentence(env)?;
+        let dotted = eat_dot(env);
+        // TODO: consider ) and }.
+        if env.tokens.is_empty() {
+            if dotted {
+                return Ok(Value::Nil);
+            } else {
+                return Ok(value);
+            }
+        }
+    }
+}
+
+fn eat_dot(env: &mut Environment) -> bool {
+    match env.tokens.pop() {
+        None => false,
+        Some(Token::Dot) => true,
+        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
+    }
+}
+
+fn eval_sentence(env: &mut Environment) -> RResult<Value> {
+    let mut values = Vec::new();
+    while is_in_sentence(env) {
+        values.push(eval_expression(env)?);
+    }
+    if values.is_empty() {
+        values.push(Value::Nil);
+    }
+    values.reverse();
+    while values.len() > 1 {
+        applicate(env, &mut values)?;
+    }
+    Ok(values.pop().unwrap())
+}
+
+fn is_in_sentence(env: &Environment) -> bool {
+    !matches!(env.tokens.last(), Some(Token::Dot) | None)
+}
+
+fn eval_expression(env: &mut Environment) -> RResult<Value> {
+    match env.tokens.pop() {
+        None => panic!("unexpected error: no token passed to eval_expression."),
+        Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
+        Some(Token::Symbol(n)) => {
+            if let Some(n) = number::parse(&n) {
+                Ok(n)
+            } else {
+                Ok(Value::Symbol(n))
+            }
+        }
+    }
+}
+
+fn applicate(env: &mut Environment, values: &mut Vec<Value>) -> RResult<()> {
+    let Some(s) = values.pop() else {
+        panic!("unexpected error: no value passed to applicate.");
+    };
+    let Some(v) = values.pop() else {
+        values.push(s);
+        return Ok(());
+    };
+    let Value::Symbol(v) = v else {
+        return Err(format!("error: function must be a symbol but {v:?} provided.").into());
+    };
+    let t = s.get_typeid(env);
+    let Some(f) = env.fn_map.get(&t).and_then(|n| n.get(&v)) else {
+        return Err(format!("error: function '{v}' not defined on {t}.").into());
+    };
+    match f {
+        Function::Builtin(f) => (f)(s, values)?,
+    }
     Ok(())
 }
 
-fn is_sentence_end(env: &Environment) -> bool {
-    if let Some(n) = env.tokens.get(env.index) {
-        n == &Token::Dot
-    } else {
-        true
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_not_symbol_not_function() {
+        let mut env = Environment {
+            tokens: Vec::new(),
+            fn_map: HashMap::new(),
+        };
+        let mut values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
+        applicate(&mut env, &mut values).unwrap_err();
+    }
+
+    #[test]
+    fn test_undefined_function() {
+        let mut env = Environment {
+            tokens: Vec::new(),
+            fn_map: HashMap::new(),
+        };
+        let mut values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
+        applicate(&mut env, &mut values).unwrap_err();
     }
 }
