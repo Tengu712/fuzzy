@@ -1,7 +1,7 @@
 use crate::*;
 use regex::Regex;
 
-#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Dot,
     Symbol(String),

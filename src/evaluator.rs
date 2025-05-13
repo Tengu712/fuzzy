@@ -32,6 +32,7 @@ enum Value {
     U128(u128),
     F32(f32),
     F64(f64),
+    Symbol(String),
 }
 
 struct Environment<'a> {
@@ -46,21 +47,33 @@ fn eval_block(env: &mut Environment) -> RResult<()> {
 }
 
 fn eval_sentence(env: &mut Environment) -> RResult<()> {
-    eval_expression(env)?;
+    while !is_sentence_end(env) {
+        eval_expression(env)?;
+    }
+    println!("{:?}", env.stack);
     Ok(())
 }
 
 fn eval_expression(env: &mut Environment) -> RResult<()> {
     match env.tokens.get(env.index) {
         None => env.stack.push(Value::Nil),
-        Some(n) => {
+        Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
+        Some(Token::Symbol(n)) => {
             if let Some(n) = number::parse(n) {
                 env.stack.push(n);
-                env.index += 1;
             } else {
-                return Err(format!("error: invalid token found: {:?}", n).into());
+                env.stack.push(Value::Symbol(n.to_string()));
             }
+            env.index += 1;
         }
     }
     Ok(())
+}
+
+fn is_sentence_end(env: &Environment) -> bool {
+    if let Some(n) = env.tokens.get(env.index) {
+        n == &Token::Dot
+    } else {
+        true
+    }
 }
