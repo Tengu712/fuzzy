@@ -82,14 +82,6 @@ fn eval_block(env: &mut Environment) -> RResult<Value> {
     }
 }
 
-fn eat_dot(env: &mut Environment) -> bool {
-    match env.tokens.pop() {
-        None => false,
-        Some(Token::Dot) => true,
-        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
-    }
-}
-
 fn eval_sentence(env: &mut Environment) -> RResult<Value> {
     let mut values = Vec::new();
     while is_in_sentence(env) {
@@ -99,10 +91,15 @@ fn eval_sentence(env: &mut Environment) -> RResult<Value> {
         values.push(Value::Nil);
     }
     values.reverse();
-    while values.len() > 1 {
-        applicate(env, &mut values)?;
+    applicate(env, &mut values)
+}
+
+fn eat_dot(env: &mut Environment) -> bool {
+    match env.tokens.pop() {
+        None => false,
+        Some(Token::Dot) => true,
+        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
     }
-    Ok(values.pop().unwrap())
 }
 
 fn is_in_sentence(env: &Environment) -> bool {
@@ -123,25 +120,58 @@ fn eval_expression(env: &mut Environment) -> RResult<Value> {
     }
 }
 
-fn applicate(env: &mut Environment, values: &mut Vec<Value>) -> RResult<()> {
+fn applicate(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Value> {
+    let mut itr = applicate_inner(env, values)?.into_iter();
+    let Some(r) = itr.next() else {
+        panic!("unexpected error: the result of application is empty.");
+    };
+    if !values.is_empty() || itr.next().is_some() {
+        println!("warn: unused arguments found.");
+    }
+    Ok(r)
+}
+
+fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Vec<Value>> {
+    let mut args = Vec::new();
+
+    // get subject
     let Some(s) = values.pop() else {
         panic!("unexpected error: no value passed to applicate.");
     };
+
+    // get verb
     let Some(v) = values.pop() else {
-        values.push(s);
-        return Ok(());
+        args.push(s);
+        return Ok(args);
     };
-    let Value::Symbol(v) = v else {
-        return Err(format!("error: function must be a symbol but {v:?} provided.").into());
+    let Value::Symbol(v_sym) = &v else {
+        args.push(s);
+        return Ok(args);
     };
+
+    // get verb function
     let t = s.get_typeid(env);
-    let Some(f) = env.fn_map.get(&t).and_then(|n| n.get(&v)) else {
-        return Err(format!("error: function '{v}' not defined on {t}.").into());
+    if !env.fn_map.contains_key(&t) || !env.fn_map[&t].contains_key(v_sym) {
+        values.push(v);
+        args.push(s);
+        return Ok(args);
     };
-    match f {
-        Function::Builtin(f) => (f)(s, values)?,
+
+    // collect arguments
+    while !values.is_empty() {
+        let mut result = applicate_inner(env, values)?;
+        args.append(&mut result);
     }
-    Ok(())
+    args.reverse();
+
+    // applicate
+    match env.fn_map[&t][v_sym] {
+        Function::Builtin(f) => (f)(s, &mut args)?,
+    }
+
+    // finish
+    args.reverse();
+    Ok(args)
 }
 
 #[cfg(test)]
@@ -155,7 +185,8 @@ mod test {
             fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
-        applicate(&mut env, &mut values).unwrap_err();
+        values.reverse();
+        assert_eq!(applicate(&mut env, &mut values).unwrap(), Value::I32(1));
     }
 
     #[test]
@@ -165,6 +196,7 @@ mod test {
             fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
-        applicate(&mut env, &mut values).unwrap_err();
+        values.reverse();
+        assert_eq!(applicate(&mut env, &mut values).unwrap(), Value::I32(1));
     }
 }
