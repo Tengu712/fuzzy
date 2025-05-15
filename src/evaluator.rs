@@ -19,6 +19,7 @@ pub enum Value {
     U128(u128),
     F32(f32),
     F64(f64),
+    String(String),
     Symbol(String),
 }
 
@@ -38,6 +39,7 @@ impl Value {
             Self::U128(_) => "u128".to_string(),
             Self::F32(_) => "f32".to_string(),
             Self::F64(_) => "f64".to_string(),
+            Self::String(_) => "string".to_string(),
             // TODO: get variable type.
             Self::Symbol(_) => panic!("unimplemented"),
         }
@@ -103,6 +105,8 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
         Some(Token::Symbol(n)) => {
             if let Some(n) = number::parse(&n) {
                 Ok(n)
+            } else if n.starts_with("\"") && n.ends_with("\"") {
+                Ok(Value::String(n[1..n.len() - 1].to_string()))
             } else {
                 Ok(Value::Symbol(n))
             }
