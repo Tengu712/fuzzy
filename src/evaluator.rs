@@ -57,12 +57,7 @@ pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
     let mut env = Environment {
         fn_map: function::setup(),
     };
-    let value = eval_block(&mut env, &mut tokens)?;
-    if tokens.is_empty() {
-        Ok(value)
-    } else {
-        Err("error: some tokens not evaluated.".into())
-    }
+    eval_block(&mut env, &mut tokens)
 }
 
 fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
@@ -87,20 +82,7 @@ fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Valu
     if values.is_empty() {
         values.push(Value::Nil);
     }
-    values.reverse();
-    applicate(env, &mut values)
-}
-
-fn eat_dot(tokens: &mut Vec<Token>) -> bool {
-    match tokens.pop() {
-        None => false,
-        Some(Token::Dot) => true,
-        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
-    }
-}
-
-fn is_in_sentence(tokens: &Vec<Token>) -> bool {
-    !matches!(tokens.last(), Some(Token::Dot) | None)
+    applicate(env, values)
 }
 
 fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
@@ -111,12 +93,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(mut inner) = split_at_last_token(tokens, Token::RParen) else {
                 return Err("error: unmatchd '(' found.".into());
             };
-            let Some(rp) = tokens.pop() else {
-                panic!("unexpected error: failed to pop ')' from tokens.");
-            };
-            if rp != Token::RParen {
-                panic!("unexpected error: failed to remove ')' from tokens.");
-            }
+            assert!(
+                matches!(tokens.pop(), Some(Token::RParen)),
+                "unexpected error: failed to pop ')' from tokens."
+            );
             eval_block(env, &mut inner)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
@@ -130,6 +110,18 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
     }
 }
 
+fn eat_dot(tokens: &mut Vec<Token>) -> bool {
+    match tokens.pop() {
+        None => false,
+        Some(Token::Dot) => true,
+        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
+    }
+}
+
+fn is_in_sentence(tokens: &[Token]) -> bool {
+    !matches!(tokens.last(), Some(Token::Dot) | None)
+}
+
 fn split_at_last_token(tokens: &mut Vec<Token>, token: Token) -> Option<Vec<Token>> {
     tokens
         .iter()
@@ -137,11 +129,12 @@ fn split_at_last_token(tokens: &mut Vec<Token>, token: Token) -> Option<Vec<Toke
         .map(|n| tokens.split_off(n + 1))
 }
 
-fn applicate(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Value> {
-    let mut itr = applicate_inner(env, values)?.into_iter();
-    let Some(r) = itr.next() else {
-        panic!("unexpected error: the result of application is empty.");
-    };
+fn applicate(env: &mut Environment, mut values: Vec<Value>) -> RResult<Value> {
+    values.reverse();
+    let mut itr = applicate_inner(env, &mut values)?.into_iter();
+    let r = itr
+        .next()
+        .expect("unexpected error: the result of application is empty.");
     if !values.is_empty() || itr.next().is_some() {
         println!("warn: unused arguments found.");
     }
@@ -152,9 +145,9 @@ fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Ve
     let mut args = Vec::new();
 
     // get subject
-    let Some(s) = values.pop() else {
-        panic!("unexpected error: no value passed to applicate.");
-    };
+    let s = values
+        .pop()
+        .expect("unexpected error: no value passed to applicate.");
 
     // get verb
     let Some(v) = values.pop() else {
@@ -200,9 +193,8 @@ mod test {
         let mut env = Environment {
             fn_map: function::setup(),
         };
-        let mut values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
-        values.reverse();
-        assert_eq!(applicate(&mut env, &mut values).unwrap(), Value::I32(1));
+        let values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
+        assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
 
     #[test]
@@ -210,8 +202,7 @@ mod test {
         let mut env = Environment {
             fn_map: function::setup(),
         };
-        let mut values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
-        values.reverse();
-        assert_eq!(applicate(&mut env, &mut values).unwrap(), Value::I32(1));
+        let values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
+        assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
 }
