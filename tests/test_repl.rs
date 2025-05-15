@@ -38,3 +38,13 @@ fn test_expression() {
         .success()
         .stdout(">> I32(14)\n>> ");
 }
+
+#[test]
+fn test_expression_ordered() {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .write_stdin("(2 * 3) + 4\n#exit\n")
+        .assert()
+        .success()
+        .stdout(">> I32(10)\n>> ");
+}

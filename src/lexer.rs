@@ -32,7 +32,10 @@ fn split_trailing_signs(s: &str) -> Vec<&str> {
     if is_sign_str(s) {
         return vec![s];
     }
-    let pos = s.rfind(|c: char| !is_sign_char(c)).map(|i| i + 1).unwrap_or(0);
+    let pos = s
+        .rfind(|c: char| !is_sign_char(c))
+        .map(|i| i + 1)
+        .unwrap_or(0);
     let mut v = Vec::new();
     v.push(&s[..pos]);
     for i in pos..s.len() {

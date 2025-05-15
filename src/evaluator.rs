@@ -49,30 +49,27 @@ enum Function {
 }
 
 struct Environment {
-    tokens: Vec<Token>,
     fn_map: HashMap<String, HashMap<String, Function>>,
     // TODO: add variable.
 }
 
-pub fn eval(tokens: Vec<Token>) -> RResult<Value> {
+pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
     let mut env = Environment {
-        tokens,
         fn_map: function::setup(),
     };
-    let value = eval_block(&mut env)?;
-    if env.tokens.is_empty() {
+    let value = eval_block(&mut env, &mut tokens)?;
+    if tokens.is_empty() {
         Ok(value)
     } else {
         Err("error: some tokens not evaluated.".into())
     }
 }
 
-fn eval_block(env: &mut Environment) -> RResult<Value> {
+fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     loop {
-        let value = eval_sentence(env)?;
-        let dotted = eat_dot(env);
-        // TODO: consider ) and }.
-        if env.tokens.is_empty() {
+        let value = eval_sentence(env, tokens)?;
+        let dotted = eat_dot(tokens);
+        if tokens.is_empty() {
             if dotted {
                 return Ok(Value::Nil);
             } else {
@@ -82,10 +79,10 @@ fn eval_block(env: &mut Environment) -> RResult<Value> {
     }
 }
 
-fn eval_sentence(env: &mut Environment) -> RResult<Value> {
+fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     let mut values = Vec::new();
-    while is_in_sentence(env) {
-        values.push(eval_expression(env)?);
+    while is_in_sentence(tokens) {
+        values.push(eval_expression(env, tokens)?);
     }
     if values.is_empty() {
         values.push(Value::Nil);
@@ -94,24 +91,35 @@ fn eval_sentence(env: &mut Environment) -> RResult<Value> {
     applicate(env, &mut values)
 }
 
-fn eat_dot(env: &mut Environment) -> bool {
-    match env.tokens.pop() {
+fn eat_dot(tokens: &mut Vec<Token>) -> bool {
+    match tokens.pop() {
         None => false,
         Some(Token::Dot) => true,
         n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
     }
 }
 
-fn is_in_sentence(env: &Environment) -> bool {
-    !matches!(env.tokens.last(), Some(Token::Dot) | None)
+fn is_in_sentence(tokens: &Vec<Token>) -> bool {
+    !matches!(tokens.last(), Some(Token::Dot) | None)
 }
 
-fn eval_expression(env: &mut Environment) -> RResult<Value> {
-    match env.tokens.pop() {
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+    match tokens.pop() {
         None => panic!("unexpected error: no token passed to eval_expression."),
         Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
-        Some(Token::LParen) => panic!("unimplemented"),
-        Some(Token::RParen) => panic!("unimplemented"),
+        Some(Token::LParen) => {
+            let Some(mut inner) = split_at_last_token(tokens, Token::RParen) else {
+                return Err("error: unmatchd '(' found.".into());
+            };
+            let Some(rp) = tokens.pop() else {
+                panic!("unexpected error: failed to pop ')' from tokens.");
+            };
+            if rp != Token::RParen {
+                panic!("unexpected error: failed to remove ')' from tokens.");
+            }
+            eval_block(env, &mut inner)
+        }
+        Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
         Some(Token::Symbol(n)) => {
             if let Some(n) = number::parse(&n) {
                 Ok(n)
@@ -120,6 +128,13 @@ fn eval_expression(env: &mut Environment) -> RResult<Value> {
             }
         }
     }
+}
+
+fn split_at_last_token(tokens: &mut Vec<Token>, token: Token) -> Option<Vec<Token>> {
+    tokens
+        .iter()
+        .rposition(|n| n == &token)
+        .map(|n| tokens.split_off(n + 1))
 }
 
 fn applicate(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Value> {
@@ -183,7 +198,6 @@ mod test {
     #[test]
     fn test_not_symbol_not_function() {
         let mut env = Environment {
-            tokens: Vec::new(),
             fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
@@ -194,7 +208,6 @@ mod test {
     #[test]
     fn test_undefined_function() {
         let mut env = Environment {
-            tokens: Vec::new(),
             fn_map: function::setup(),
         };
         let mut values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
