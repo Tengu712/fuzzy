@@ -1,3 +1,4 @@
+mod evaluator;
 mod lexer;
 
 use std::error::Error;
@@ -13,16 +14,16 @@ fn run() -> RResult<()> {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        let input = input.trim_end();
+        let input = input.trim();
 
-        let tokens = lexer::lex(input)?;
-
-        match tokens.first() {
-            Some(lexer::Token::Symbol(n)) if n == "#exit" => break,
-            _ => (),
+        if input == "#exit" {
+            break;
         }
 
-        println!("{:?}", tokens);
+        let mut tokens = lexer::lex(input)?;
+        tokens.reverse();
+        let value = evaluator::eval(tokens)?;
+        println!("{value:?}");
     }
 
     Ok(())
