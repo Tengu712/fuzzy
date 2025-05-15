@@ -110,6 +110,8 @@ fn eval_expression(env: &mut Environment) -> RResult<Value> {
     match env.tokens.pop() {
         None => panic!("unexpected error: no token passed to eval_expression."),
         Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
+        Some(Token::LParen) => panic!("unimplemented"),
+        Some(Token::RParen) => panic!("unimplemented"),
         Some(Token::Symbol(n)) => {
             if let Some(n) = number::parse(&n) {
                 Ok(n)
