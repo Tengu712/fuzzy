@@ -155,6 +155,7 @@ fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Ve
         return Ok(args);
     };
     let Value::Symbol(v_sym) = &v else {
+        values.push(v);
         args.push(s);
         return Ok(args);
     };
