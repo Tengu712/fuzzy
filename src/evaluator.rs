@@ -122,7 +122,7 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
     }
 }
 
-fn is_in_sentence(tokens: &[Token]) -> bool {
+fn is_in_sentence(tokens: &Vec<Token>) -> bool {
     !matches!(tokens.last(), Some(Token::Dot) | None)
 }
 
