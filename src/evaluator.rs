@@ -46,18 +46,24 @@ impl Value {
     }
 }
 
+struct Variable {
+    value: Value,
+    mutable: bool,
+}
+
 enum Function {
     Builtin(fn(Value, &mut Vec<Value>) -> RResult<()>),
 }
 
 struct Environment {
     fn_map: HashMap<String, HashMap<String, Function>>,
-    // TODO: add variable.
+    vr_map: Vec<HashMap<String, Variable>>,
 }
 
 pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
     let mut env = Environment {
         fn_map: function::setup(),
+        vr_map: Vec::new(),
     };
     eval_block(&mut env, &mut tokens)
 }
@@ -197,6 +203,7 @@ mod test {
     fn test_not_symbol_not_function() {
         let mut env = Environment {
             fn_map: function::setup(),
+            vr_map: Vec::new(),
         };
         let values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
@@ -206,6 +213,7 @@ mod test {
     fn test_undefined_function() {
         let mut env = Environment {
             fn_map: function::setup(),
+            vr_map: Vec::new(),
         };
         let values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
