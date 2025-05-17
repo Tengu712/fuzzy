@@ -78,7 +78,18 @@ impl Default for Environment {
     }
 }
 
-// TODO: add documentation comment.
+/// A function to evaluate a block.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
+///
+/// Returns the evaluation result.
+/// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
+///
+/// NOTE: This function does not manage the environment's variable map stack.
+///       The caller is responsible for managing the stack.
+///       This is to accommodate the behavior where top-level blocks in a REPL
+///       have their environments expanded globally.
 pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     loop {
         let value = eval_sentence(env, tokens)?;
