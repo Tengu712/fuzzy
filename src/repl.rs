@@ -65,13 +65,12 @@ impl Value {
             Self::F64(n) => format!("{n} (f64)"),
             Self::String(n) => format!("{n} (string)"),
             Self::Symbol(n) => {
-                for m in env.vr_map.iter().rev() {
-                    if let Some(v) = m.get(n) {
-                        let a = if v.mutable { "<-" } else { "<=" };
-                        return format!("{n} {a} {}", v.value.format_for_repl(env));
-                    }
+                if let Some(v) = env.get_variable(n) {
+                    let a = if v.mutable { "<-" } else { "<=" };
+                    format!("{n} {a} {}", v.value.format_for_repl(env))
+                } else {
+                    format!("{n} (symbol)")
                 }
-                format!("{n} (symbol)")
             }
         }
     }
