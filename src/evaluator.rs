@@ -69,13 +69,16 @@ pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
 }
 
 fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+    env.vr_map.push(HashMap::new());
     loop {
         let value = eval_sentence(env, tokens)?;
         let dotted = eat_dot(tokens);
         if tokens.is_empty() {
             if dotted {
+                let _ = env.vr_map.pop();
                 return Ok(Value::Nil);
             } else {
+                let _ = env.vr_map.pop();
                 return Ok(value);
             }
         }

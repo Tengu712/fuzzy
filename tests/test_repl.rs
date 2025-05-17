@@ -48,3 +48,13 @@ fn test_expression_ordered() {
         .success()
         .stdout(">> I32(10)\n>> ");
 }
+
+#[test]
+fn test_make_variable() {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .write_stdin("12 => twelve.\n#exit\n")
+        .assert()
+        .success()
+        .stdout(">> Nil\n>> ");
+}

@@ -6,6 +6,40 @@ const ALL_TYPES: &[&str] = &[
     "string",
 ];
 
+macro_rules! define_make_variable {
+    ($fn: ident, $name: expr, $mutable: expr) => {
+        fn $fn(env: &mut Environment, s: Value, values: &mut Vec<Value>) -> RResult<()> {
+            let Some(Value::Symbol(n)) = values.pop() else {
+                return Err(format!(
+                    "error: no symbol argument passed to '{}:{}'.",
+                    s.get_typeid(env),
+                    $name
+                )
+                .into());
+            };
+            let v = Variable {
+                value: s,
+                mutable: $mutable,
+            };
+            env.vr_map
+                .last_mut()
+                .expect("unexpected error: variable map stack is empty.")
+                .insert(n, v);
+            values.push(Value::Nil);
+            Ok(())
+        }
+    };
+}
+define_make_variable!(make_mutable_variable, "->", true);
+define_make_variable!(make_immutable_variable, "=>", false);
+fn insert_variable_operations(maps: &mut HashMap<String, HashMap<String, Function>>, ty: &str) {
+    let map = maps
+        .get_mut(ty)
+        .unwrap_or_else(|| panic!("unexpected error: function map for '{ty}' not found."));
+    map.insert("->".to_string(), Function::Builtin(make_mutable_variable));
+    map.insert("=>".to_string(), Function::Builtin(make_immutable_variable));
+}
+
 macro_rules! for_all_numeric_types {
     ($macro: ident $(, $($arg: tt)*)?) => {
         $macro!($($($arg)*, )? i8);
@@ -118,6 +152,10 @@ pub fn setup() -> HashMap<String, HashMap<String, Function>> {
     let mut maps = HashMap::new();
     for n in ALL_TYPES {
         maps.insert(n.to_string(), HashMap::new());
+    }
+
+    for n in ALL_TYPES {
+        insert_variable_operations(&mut maps, n);
     }
 
     for_all_numeric_types!(insert_numeric_function, maps, add, "+");
