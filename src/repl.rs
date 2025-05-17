@@ -71,7 +71,7 @@ impl Value {
                         return format!("{n} {a} {}", v.value.format_for_repl(env));
                     }
                 }
-                format!("= {n} (symbol)")
+                format!("{n} (symbol)")
             }
         }
     }
