@@ -7,7 +7,7 @@ fn test_nil() {
         .write_stdin("\n#exit\n")
         .assert()
         .success()
-        .stdout(">> Nil\n>> ");
+        .stdout(">> ()\n>> ");
 }
 
 #[test]
@@ -17,7 +17,7 @@ fn test_float() {
         .write_stdin("1.2f32\n#exit\n")
         .assert()
         .success()
-        .stdout(">> F32(1.2)\n>> ");
+        .stdout(">> 1.2 (f32)\n>> ");
 }
 
 #[test]
@@ -26,7 +26,8 @@ fn test_add_type_missmatch() {
         .unwrap()
         .write_stdin("1.2f32 + 123\n#exit\n")
         .assert()
-        .failure();
+        .success()
+        .stdout(">> error: type missmatched argument passed to 'add:+'.\n>> ");
 }
 
 #[test]
@@ -36,7 +37,7 @@ fn test_expression() {
         .write_stdin("2 * 3 + 4\n#exit\n")
         .assert()
         .success()
-        .stdout(">> I32(14)\n>> ");
+        .stdout(">> 14 (i32)\n>> ");
 }
 
 #[test]
@@ -46,15 +47,15 @@ fn test_expression_ordered() {
         .write_stdin("(2 * 3) + 4\n#exit\n")
         .assert()
         .success()
-        .stdout(">> I32(10)\n>> ");
+        .stdout(">> 10 (i32)\n>> ");
 }
 
 #[test]
 fn test_make_variable() {
     Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .unwrap()
-        .write_stdin("12 => twelve.\n#exit\n")
+        .write_stdin("12 => twelve.\ntwelve\n#exit\n")
         .assert()
         .success()
-        .stdout(">> Nil\n>> ");
+        .stdout(">> ()\n>> twelve => 12 (i32)\n>> ");
 }

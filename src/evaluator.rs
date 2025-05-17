@@ -24,7 +24,7 @@ pub enum Value {
 }
 
 impl Value {
-    fn get_typeid(&self, _: &Environment) -> String {
+    fn get_typeid(&self, env: &Environment) -> String {
         match self {
             Self::Nil => "nil".to_string(),
             Self::I8(_) => "i8".to_string(),
@@ -40,45 +40,50 @@ impl Value {
             Self::F32(_) => "f32".to_string(),
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
-            // TODO: get variable type.
-            Self::Symbol(_) => panic!("unimplemented"),
+            Self::Symbol(n) => {
+                for m in env.vr_map.iter().rev() {
+                    if let Some(v) = m.get(n) {
+                        return v.value.get_typeid(env);
+                    }
+                }
+                "symbol".to_string()
+            }
         }
     }
 }
 
-struct Variable {
-    value: Value,
-    mutable: bool,
+pub struct Variable {
+    pub value: Value,
+    pub mutable: bool,
 }
 
 enum Function {
     Builtin(fn(&mut Environment, Value, &mut Vec<Value>) -> RResult<()>),
 }
 
-struct Environment {
-    fn_map: HashMap<String, HashMap<String, Function>>,
-    vr_map: Vec<HashMap<String, Variable>>,
+pub struct Environment {
+    pub fn_map: HashMap<String, HashMap<String, Function>>,
+    pub vr_map: Vec<HashMap<String, Variable>>,
 }
 
-pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
-    let mut env = Environment {
-        fn_map: function::setup(),
-        vr_map: Vec::new(),
-    };
-    eval_block(&mut env, &mut tokens)
+impl Default for Environment {
+    fn default() -> Self {
+        Self {
+            fn_map: function::setup(),
+            vr_map: Vec::new(),
+        }
+    }
 }
 
-fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    env.vr_map.push(HashMap::new());
+// TODO: add documentation comment.
+pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     loop {
         let value = eval_sentence(env, tokens)?;
         let dotted = eat_dot(tokens);
         if tokens.is_empty() {
             if dotted {
-                let _ = env.vr_map.pop();
                 return Ok(Value::Nil);
             } else {
-                let _ = env.vr_map.pop();
                 return Ok(value);
             }
         }
@@ -108,7 +113,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
                 matches!(tokens.pop(), Some(Token::RParen)),
                 "unexpected error: failed to pop ')' from tokens."
             );
-            eval_block(env, &mut inner)
+            env.vr_map.push(HashMap::new());
+            let result = eval_block(env, &mut inner)?;
+            let _ = env.vr_map.pop();
+            Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
         Some(Token::Symbol(n)) => {
