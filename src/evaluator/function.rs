@@ -3,8 +3,43 @@ use std::ops::*;
 
 const ALL_TYPES: &[&str] = &[
     "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string",
+    "string", "symbol",
 ];
+
+macro_rules! define_make_variable {
+    ($fn: ident, $name: expr, $mutable: expr) => {
+        fn $fn(env: &mut Environment, s: Value, values: &mut Vec<Value>) -> RResult<()> {
+            let Some(Value::Symbol(n)) = values.pop() else {
+                return Err(format!(
+                    "error: no symbol argument passed to '{}:{}'.",
+                    s.get_typeid(env),
+                    $name
+                )
+                .into());
+            };
+            let v = Variable {
+                value: s,
+                mutable: $mutable,
+            };
+            env.vr_map
+                .last_mut()
+                .expect("unexpected error: variable map stack is empty.")
+                .insert(n, v);
+            values.push(Value::Nil);
+            Ok(())
+        }
+    };
+}
+define_make_variable!(make_mutable_variable, "->", true);
+define_make_variable!(make_immutable_variable, "=>", false);
+
+fn insert_variable_operations(maps: &mut FunctionMap, ty: &str) {
+    let map = maps
+        .get_mut(ty)
+        .unwrap_or_else(|| panic!("unexpected error: function map for '{ty}' not found."));
+    map.insert("->".to_string(), Function::Builtin(make_mutable_variable));
+    map.insert("=>".to_string(), Function::Builtin(make_immutable_variable));
+}
 
 macro_rules! for_all_numeric_types {
     ($macro: ident $(, $($arg: tt)*)?) => {
@@ -72,7 +107,7 @@ for_all_numeric_types_and_variants!(implement_intovalue);
 
 macro_rules! define_numeric_function {
     ($trait: ident, $fn: ident, $name: expr) => {
-        fn $fn<T>(s: Value, values: &mut Vec<Value>) -> RResult<()>
+        fn $fn<T>(_: &mut Environment, s: Value, values: &mut Vec<Value>) -> RResult<()>
         where
             T: FromValue + IntoValue + $trait<Output = T>,
         {
@@ -114,10 +149,14 @@ macro_rules! insert_numeric_function {
     };
 }
 
-pub fn setup() -> HashMap<String, HashMap<String, Function>> {
+pub fn setup() -> FunctionMap {
     let mut maps = HashMap::new();
     for n in ALL_TYPES {
         maps.insert(n.to_string(), HashMap::new());
+    }
+
+    for n in ALL_TYPES {
+        insert_variable_operations(&mut maps, n);
     }
 
     for_all_numeric_types!(insert_numeric_function, maps, add, "+");

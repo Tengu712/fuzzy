@@ -24,7 +24,7 @@ pub enum Value {
 }
 
 impl Value {
-    fn get_typeid(&self, _: &Environment) -> String {
+    fn get_typeid(&self, env: &Environment) -> String {
         match self {
             Self::Nil => "nil".to_string(),
             Self::I8(_) => "i8".to_string(),
@@ -40,29 +40,57 @@ impl Value {
             Self::F32(_) => "f32".to_string(),
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
-            // TODO: get variable type.
-            Self::Symbol(_) => panic!("unimplemented"),
+            Self::Symbol(n) => {
+                for m in env.vr_map.iter().rev() {
+                    if let Some(v) = m.get(n) {
+                        return v.value.get_typeid(env);
+                    }
+                }
+                "symbol".to_string()
+            }
         }
     }
 }
 
-enum Function {
-    Builtin(fn(Value, &mut Vec<Value>) -> RResult<()>),
+pub struct Variable {
+    pub value: Value,
+    pub mutable: bool,
 }
 
-struct Environment {
-    fn_map: HashMap<String, HashMap<String, Function>>,
-    // TODO: add variable.
+pub enum Function {
+    Builtin(fn(&mut Environment, Value, &mut Vec<Value>) -> RResult<()>),
 }
 
-pub fn eval(mut tokens: Vec<Token>) -> RResult<Value> {
-    let mut env = Environment {
-        fn_map: function::setup(),
-    };
-    eval_block(&mut env, &mut tokens)
+pub type FunctionMap = HashMap<String, HashMap<String, Function>>;
+pub type VariableMapStack = Vec<HashMap<String, Variable>>;
+
+pub struct Environment {
+    pub fn_map: FunctionMap,
+    pub vr_map: VariableMapStack,
 }
 
-fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+impl Default for Environment {
+    fn default() -> Self {
+        Self {
+            fn_map: function::setup(),
+            vr_map: Vec::new(),
+        }
+    }
+}
+
+/// A function to evaluate a block.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
+///
+/// Returns the evaluation result.
+/// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
+///
+/// NOTE: This function does not manage the environment's variable map stack.
+///       The caller is responsible for managing the stack.
+///       This is to accommodate the behavior where top-level blocks in a REPL
+///       have their environments expanded globally.
+pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     loop {
         let value = eval_sentence(env, tokens)?;
         let dotted = eat_dot(tokens);
@@ -99,7 +127,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
                 matches!(tokens.pop(), Some(Token::RParen)),
                 "unexpected error: failed to pop ')' from tokens."
             );
-            eval_block(env, &mut inner)
+            env.vr_map.push(HashMap::new());
+            let result = eval_block(env, &mut inner)?;
+            let _ = env.vr_map.pop();
+            Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
         Some(Token::Symbol(n)) => {
@@ -181,7 +212,7 @@ fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Ve
 
     // applicate
     match env.fn_map[&t][v_sym] {
-        Function::Builtin(f) => (f)(s, &mut args)?,
+        Function::Builtin(f) => (f)(env, s, &mut args)?,
     }
 
     // finish
@@ -195,18 +226,14 @@ mod test {
 
     #[test]
     fn test_not_symbol_not_function() {
-        let mut env = Environment {
-            fn_map: function::setup(),
-        };
+        let mut env = Environment::default();
         let values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
 
     #[test]
     fn test_undefined_function() {
-        let mut env = Environment {
-            fn_map: function::setup(),
-        };
+        let mut env = Environment::default();
         let values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
