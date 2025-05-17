@@ -38,7 +38,7 @@ fn test_expression_ordered() {
 }
 
 #[test]
-fn test_make_variable() {
+fn test_define_variable() {
     run(
         "12 => twelve.\ntwelve\n#exit",
         ">> ()\n>> twelve <= 12 (i32)\n>> ",
@@ -46,9 +46,25 @@ fn test_make_variable() {
 }
 
 #[test]
-fn test_make_symbol_variable() {
+fn test_define_symbol_variable() {
     run(
         "pi => foo.\n3.14f32 -> pi.\nfoo\n#exit",
         ">> ()\n>> ()\n>> foo <= pi <- 3.14 (f32)\n>> ",
     );
+}
+
+#[test]
+fn test_restrict_define_variable_same_scope() {
+    run(
+        "1 -> a.\n2 => a.\n3 => a.\n#exit",
+        ">> ()\n>> ()\n>> error: cannot redefine variable 'a'.\n>> ",
+    )
+}
+
+#[test]
+fn test_restrict_define_variable_upper_scope() {
+    run(
+        "(1 -> a. (2 => a. (3 -> a.)))\n#exit",
+        ">> error: cannot redefine variable 'a'.\n>> ",
+    )
 }

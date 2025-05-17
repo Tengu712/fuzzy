@@ -1,0 +1,14 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- LParen
+- Symbol: "1"
+- Symbol: +
+- LParen
+- Symbol: "2"
+- Symbol: "*"
+- Symbol: "3"
+- RParen
+- RParen
+- Dot

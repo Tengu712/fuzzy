@@ -77,4 +77,10 @@ mod test {
         let tokens = lex("1 + (2 * 3).").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
+
+    #[test]
+    fn test_continuous_parenthesis() {
+        let tokens = lex("(1 + (2 * 3)).").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
 }

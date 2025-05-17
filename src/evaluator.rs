@@ -78,6 +78,12 @@ impl Default for Environment {
     }
 }
 
+impl Environment {
+    pub fn get_variable(&self, name: &str) -> Option<&Variable> {
+        self.vr_map.iter().rev().filter_map(|n| n.get(name)).next()
+    }
+}
+
 /// A function to evaluate a block.
 ///
 /// * `env` - The current environment.
@@ -120,13 +126,9 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
         None => panic!("unexpected error: no token passed to eval_expression."),
         Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
         Some(Token::LParen) => {
-            let Some(mut inner) = split_at_last_token(tokens, Token::RParen) else {
+            let Some(mut inner) = extract_parenthesized_content(tokens) else {
                 return Err("error: unmatchd '(' found.".into());
             };
-            assert!(
-                matches!(tokens.pop(), Some(Token::RParen)),
-                "unexpected error: failed to pop ')' from tokens."
-            );
             env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut inner)?;
             let _ = env.vr_map.pop();
@@ -157,11 +159,21 @@ fn is_in_sentence(tokens: &[Token]) -> bool {
     !matches!(tokens.last(), Some(Token::Dot) | None)
 }
 
-fn split_at_last_token(tokens: &mut Vec<Token>, token: Token) -> Option<Vec<Token>> {
-    tokens
-        .iter()
-        .rposition(|n| n == &token)
-        .map(|n| tokens.split_off(n + 1))
+fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> {
+    let mut depth = 0;
+    for (i, t) in tokens.iter().enumerate() {
+        match t {
+            Token::RParen if depth == 0 => {
+                let result = tokens.split_off(i + 1);
+                tokens.pop();
+                return Some(result);
+            }
+            Token::RParen => depth -= 1,
+            Token::LParen => depth += 1,
+            _ => (),
+        }
+    }
+    None
 }
 
 fn applicate(env: &mut Environment, mut values: Vec<Value>) -> RResult<Value> {
@@ -223,6 +235,44 @@ fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Ve
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_parenthesis() {
+        let mut tokens = vec![
+            // Token::LParen,
+            Token::Symbol("1".to_string()),
+            Token::RParen,
+            Token::Symbol("2".to_string()),
+        ];
+        tokens.reverse();
+        let mut expect = vec![Token::Symbol("1".to_string())];
+        expect.reverse();
+        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        assert_eq!(result, expect);
+    }
+
+    #[test]
+    fn test_multiple_parenthesis() {
+        let mut tokens = vec![
+            // Token::LParen,
+            Token::Symbol("1".to_string()),
+            Token::LParen,
+            Token::Symbol("2".to_string()),
+            Token::RParen,
+            Token::RParen,
+            Token::Symbol("3".to_string()),
+        ];
+        tokens.reverse();
+        let mut expect = vec![
+            Token::Symbol("1".to_string()),
+            Token::LParen,
+            Token::Symbol("2".to_string()),
+            Token::RParen,
+        ];
+        expect.reverse();
+        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        assert_eq!(result, expect);
+    }
 
     #[test]
     fn test_not_symbol_not_function() {
