@@ -57,13 +57,16 @@ pub struct Variable {
     pub mutable: bool,
 }
 
-enum Function {
+pub enum Function {
     Builtin(fn(&mut Environment, Value, &mut Vec<Value>) -> RResult<()>),
 }
 
+pub type FunctionMap = HashMap<String, HashMap<String, Function>>;
+pub type VariableMapStack = Vec<HashMap<String, Variable>>;
+
 pub struct Environment {
-    pub fn_map: HashMap<String, HashMap<String, Function>>,
-    pub vr_map: Vec<HashMap<String, Variable>>,
+    pub fn_map: FunctionMap,
+    pub vr_map: VariableMapStack,
 }
 
 impl Default for Environment {

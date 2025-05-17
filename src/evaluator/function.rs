@@ -32,7 +32,8 @@ macro_rules! define_make_variable {
 }
 define_make_variable!(make_mutable_variable, "->", true);
 define_make_variable!(make_immutable_variable, "=>", false);
-fn insert_variable_operations(maps: &mut HashMap<String, HashMap<String, Function>>, ty: &str) {
+
+fn insert_variable_operations(maps: &mut FunctionMap, ty: &str) {
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("unexpected error: function map for '{ty}' not found."));
@@ -148,7 +149,7 @@ macro_rules! insert_numeric_function {
     };
 }
 
-pub fn setup() -> HashMap<String, HashMap<String, Function>> {
+pub fn setup() -> FunctionMap {
     let mut maps = HashMap::new();
     for n in ALL_TYPES {
         maps.insert(n.to_string(), HashMap::new());
