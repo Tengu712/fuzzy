@@ -67,7 +67,7 @@ impl Value {
             Self::Symbol(n) => {
                 for m in env.vr_map.iter().rev() {
                     if let Some(v) = m.get(n) {
-                        let a = if v.mutable { "->" } else { "=>" };
+                        let a = if v.mutable { "<-" } else { "<=" };
                         return format!("{n} {a} {}", v.value.format_for_repl(env));
                     }
                 }

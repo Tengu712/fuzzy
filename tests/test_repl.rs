@@ -41,7 +41,7 @@ fn test_expression_ordered() {
 fn test_make_variable() {
     run(
         "12 => twelve.\ntwelve\n#exit",
-        ">> ()\n>> twelve => 12 (i32)\n>> ",
+        ">> ()\n>> twelve <= 12 (i32)\n>> ",
     );
 }
 
@@ -49,6 +49,6 @@ fn test_make_variable() {
 fn test_make_symbol_variable() {
     run(
         "pi => foo.\n3.14f32 -> pi.\nfoo\n#exit",
-        ">> ()\n>> ()\n>> foo => pi -> 3.14 (f32)\n>> ",
+        ">> ()\n>> ()\n>> foo <= pi <- 3.14 (f32)\n>> ",
     );
 }
