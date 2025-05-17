@@ -15,6 +15,11 @@ fn test_nil() {
 }
 
 #[test]
+fn test_empty_block() {
+    run("()\n#exit\n", ">> ()\n>> ");
+}
+
+#[test]
 fn test_float() {
     run("1.2f32\n#exit", ">> 1.2 (f32)\n>> ");
 }
