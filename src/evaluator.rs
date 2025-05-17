@@ -215,20 +215,14 @@ mod test {
 
     #[test]
     fn test_not_symbol_not_function() {
-        let mut env = Environment {
-            fn_map: function::setup(),
-            vr_map: Vec::new(),
-        };
+        let mut env = Environment::default();
         let values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
 
     #[test]
     fn test_undefined_function() {
-        let mut env = Environment {
-            fn_map: function::setup(),
-            vr_map: Vec::new(),
-        };
+        let mut env = Environment::default();
         let values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
         assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
     }
