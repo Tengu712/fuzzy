@@ -52,7 +52,7 @@ struct Variable {
 }
 
 enum Function {
-    Builtin(fn(Value, &mut Vec<Value>) -> RResult<()>),
+    Builtin(fn(&mut Environment, Value, &mut Vec<Value>) -> RResult<()>),
 }
 
 struct Environment {
@@ -187,7 +187,7 @@ fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Ve
 
     // applicate
     match env.fn_map[&t][v_sym] {
-        Function::Builtin(f) => (f)(s, &mut args)?,
+        Function::Builtin(f) => (f)(env, s, &mut args)?,
     }
 
     // finish

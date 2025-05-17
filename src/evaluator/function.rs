@@ -72,7 +72,7 @@ for_all_numeric_types_and_variants!(implement_intovalue);
 
 macro_rules! define_numeric_function {
     ($trait: ident, $fn: ident, $name: expr) => {
-        fn $fn<T>(s: Value, values: &mut Vec<Value>) -> RResult<()>
+        fn $fn<T>(_: &mut Environment, s: Value, values: &mut Vec<Value>) -> RResult<()>
         where
             T: FromValue + IntoValue + $trait<Output = T>,
         {
