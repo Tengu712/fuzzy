@@ -96,6 +96,7 @@ impl Environment {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 enum Parsed {
     Comma,
     Label(String),
@@ -132,9 +133,6 @@ fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Valu
     let mut parseds = Vec::new();
     while !matches!(tokens.last(), Some(Token::Dot) | None) {
         parseds.push(eval_expression(env, tokens)?);
-    }
-    if parseds.is_empty() {
-        parseds.push(Parsed::Value(Value::Nil));
     }
     parseds.reverse();
     applicate(env, parseds)
@@ -193,7 +191,7 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
 fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
     parseds
         .iter()
-        .position(|n| matches!(n, Parsed::Comma))
+        .rposition(|n| matches!(n, Parsed::Comma))
         .map(|i| {
             let result = parseds.split_off(i + 1);
             parseds.pop();
@@ -219,12 +217,10 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let s = if let Some(n) = extract_until_comma(parseds) {
         applicate(env, n)?
     } else {
-        let n = parseds
-            .pop()
-            .expect("unexpected error: no value passed to applicate.");
-        match n {
-            Parsed::Comma => return Err("error: comma cannot be the subject.".into()),
-            Parsed::Label(n) => {
+        match parseds.pop() {
+            None => Value::Nil,
+            Some(Parsed::Comma) => return Err("error: comma cannot be the subject.".into()),
+            Some(Parsed::Label(n)) => {
                 if let Some(n) = env.get_variable(&n) {
                     // OPTIMIZE: remove clone.
                     n.value.clone()
@@ -232,7 +228,7 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
                     return Err(format!("error: undefined variable '{n}' found.").into());
                 }
             }
-            Parsed::Value(n) => n,
+            Some(Parsed::Value(n)) => n,
         }
     };
 
@@ -311,6 +307,21 @@ mod test {
         ];
         expect.reverse();
         let result = extract_parenthesized_content(&mut tokens).unwrap();
+        assert_eq!(result, expect);
+    }
+
+    #[test]
+    fn test_extract_until_comma() {
+        let mut parseds = vec![
+            Parsed::Value(Value::I32(1)),
+            Parsed::Comma,
+            Parsed::Value(Value::I32(2)),
+            Parsed::Comma,
+        ];
+        parseds.reverse();
+        let mut expect = vec![Parsed::Value(Value::I32(1))];
+        expect.reverse();
+        let result = extract_until_comma(&mut parseds).unwrap();
         assert_eq!(result, expect);
     }
 
