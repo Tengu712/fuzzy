@@ -1,3 +1,4 @@
+mod print;
 mod variable;
 
 use super::*;
@@ -123,6 +124,7 @@ pub fn setup() -> FunctionMap {
     }
 
     for n in ALL_TYPES {
+        print::insert_print(&mut maps, n);
         variable::insert_variable_definition(&mut maps, n);
     }
 
