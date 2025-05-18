@@ -136,6 +136,7 @@ fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Valu
     if parseds.is_empty() {
         parseds.push(Parsed::Value(Value::Nil));
     }
+    parseds.reverse();
     applicate(env, parseds)
 }
 
@@ -189,8 +190,18 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
     None
 }
 
+fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
+    parseds
+        .iter()
+        .position(|n| matches!(n, Parsed::Comma))
+        .map(|i| {
+            let result = parseds.split_off(i + 1);
+            parseds.pop();
+            result
+        })
+}
+
 fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
-    parseds.reverse();
     let mut itr = applicate_inner(env, &mut parseds)?.into_iter();
     let r = itr
         .next()
@@ -205,10 +216,25 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let mut args = Vec::new();
 
     // get subject
-    let s = parseds
-        .pop()
-        .expect("unexpected error: no value passed to applicate.");
-    let s = resolve_label(env, s)?;
+    let s = if let Some(n) = extract_until_comma(parseds) {
+        applicate(env, n)?
+    } else {
+        let n = parseds
+            .pop()
+            .expect("unexpected error: no value passed to applicate.");
+        match n {
+            Parsed::Comma => return Err("error: comma cannot be the subject.".into()),
+            Parsed::Label(n) => {
+                if let Some(n) = env.get_variable(&n) {
+                    // OPTIMIZE: remove clone.
+                    n.value.clone()
+                } else {
+                    return Err(format!("error: undefined variable '{n}' found.").into());
+                }
+            }
+            Parsed::Value(n) => n,
+        }
+    };
 
     // get verb
     let Some(v) = parseds.pop() else {
@@ -244,21 +270,6 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     // finish
     args.reverse();
     Ok(args)
-}
-
-fn resolve_label(env: &Environment, n: Parsed) -> RResult<Value> {
-    match n {
-        Parsed::Label(n) => {
-            if let Some(n) = env.get_variable(&n) {
-                // OPTIMIZE: remove clone.
-                Ok(n.value.clone())
-            } else {
-                Err(format!("error: undefined variable '{n}' found.").into())
-            }
-        }
-        Parsed::Value(n) => Ok(n),
-        _ => panic!("unimplemented"),
-    }
 }
 
 #[cfg(test)]
@@ -306,22 +317,31 @@ mod test {
     #[test]
     fn test_not_symbol_not_function() {
         let mut env = Environment::default();
-        let parseds = vec![
+        let mut parseds = vec![
             Parsed::Value(Value::I32(1)),
             Parsed::Value(Value::I32(2)),
             Parsed::Value(Value::I32(3)),
         ];
+        parseds.reverse();
         assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
     }
 
     #[test]
     fn test_undefined_function() {
         let mut env = Environment::default();
-        let parseds = vec![
+        let mut parseds = vec![
             Parsed::Value(Value::I32(1)),
             Parsed::Label("a".to_string()),
             Parsed::Value(Value::I32(2)),
         ];
+        parseds.reverse();
         assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
+    }
+
+    #[test]
+    fn test_comma_not_subject() {
+        let mut env = Environment::default();
+        let parseds = vec![Parsed::Comma, Parsed::Label("+".to_string())];
+        applicate(&mut env, parseds).unwrap_err();
     }
 }
