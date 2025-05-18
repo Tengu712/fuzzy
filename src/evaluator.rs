@@ -97,6 +97,7 @@ impl Environment {
 }
 
 enum Parsed {
+    Comma,
     Label(String),
     Value(Value),
 }
@@ -142,6 +143,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Pa
     match tokens.pop() {
         None => panic!("unexpected error: no token passed to eval_expression."),
         Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
+        Some(Token::Comma) => Ok(Parsed::Comma),
         Some(Token::LParen) => {
             let Some(mut inner) = extract_parenthesized_content(tokens) else {
                 return Err("error: unmatchd '(' found.".into());
@@ -255,6 +257,7 @@ fn resolve_label(env: &Environment, n: Parsed) -> RResult<Value> {
             }
         }
         Parsed::Value(n) => Ok(n),
+        _ => panic!("unimplemented"),
     }
 }
 
