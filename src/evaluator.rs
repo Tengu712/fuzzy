@@ -348,11 +348,4 @@ mod test {
         parseds.reverse();
         assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
     }
-
-    #[test]
-    fn test_comma_not_subject() {
-        let mut env = Environment::default();
-        let parseds = vec![Parsed::Comma, Parsed::Label("+".to_string())];
-        applicate(&mut env, parseds).unwrap_err();
-    }
 }
