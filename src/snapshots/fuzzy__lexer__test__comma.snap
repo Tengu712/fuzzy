@@ -1,0 +1,10 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- Symbol: "1"
+- Symbol: +
+- Symbol: "2"
+- Comma
+- Symbol: "*"
+- Symbol: "3"

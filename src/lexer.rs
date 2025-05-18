@@ -4,6 +4,7 @@ use regex::Regex;
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Dot,
+    Comma,
     LParen,
     RParen,
     Symbol(String),
@@ -12,6 +13,7 @@ impl Token {
     fn from(s: &str) -> Self {
         match s {
             "." => Self::Dot,
+            "," => Self::Comma,
             "(" => Self::LParen,
             ")" => Self::RParen,
             _ => Self::Symbol(s.to_string()),
@@ -20,7 +22,7 @@ impl Token {
 }
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
-    let tokens = Regex::new(r#""[^"]*"|[()]|\S+|\."#)?
+    let tokens = Regex::new(r#""[^"]*"|[()]|\S+|\.|,"#)?
         .find_iter(code)
         .flat_map(|n| split_trailing_signs(n.as_str()))
         .map(Token::from)
@@ -53,7 +55,7 @@ fn is_sign_str(s: &str) -> bool {
 }
 
 fn is_sign_char(c: char) -> bool {
-    matches!(c, '.' | '(' | ')')
+    matches!(c, '.' | ',' | '(' | ')')
 }
 
 #[cfg(test)]
@@ -81,6 +83,12 @@ mod test {
     #[test]
     fn test_continuous_parenthesis() {
         let tokens = lex("(1 + (2 * 3)).").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_comma() {
+        let tokens = lex("1 + 2, * 3").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 }

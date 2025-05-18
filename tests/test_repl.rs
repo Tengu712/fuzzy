@@ -43,6 +43,11 @@ fn test_expression_ordered() {
 }
 
 #[test]
+fn test_expression_ordered_with_comma() {
+    run("2 * 3, + 4\n#exit", ">> 10 (i32)\n>> ");
+}
+
+#[test]
 fn test_define_variable() {
     run("12 => 'twelve.\ntwelve\n#exit", ">> ()\n>> 12 (i32)\n>> ");
 }
