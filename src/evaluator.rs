@@ -24,6 +24,18 @@ pub enum Value {
 }
 
 impl Value {
+    fn from(s: &str) -> Option<Self> {
+        if let Some(n) = number::parse(s) {
+            Some(n)
+        } else if s.starts_with("\"") && s.ends_with("\"") {
+            Some(Value::String(s[1..s.len() - 1].to_string()))
+        } else if s.starts_with("'") {
+            Some(Value::Symbol(s[1..s.len()].to_string()))
+        } else {
+            None
+        }
+    }
+
     fn get_typeid(&self, env: &Environment) -> String {
         match self {
             Self::Nil => "nil".to_string(),
@@ -84,6 +96,11 @@ impl Environment {
     }
 }
 
+enum Parsed {
+    Label(String),
+    Value(Value),
+}
+
 /// A function to evaluate a block.
 ///
 /// * `env` - The current environment.
@@ -111,17 +128,17 @@ pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Val
 }
 
 fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut values = Vec::new();
-    while is_in_sentence(tokens) {
-        values.push(eval_expression(env, tokens)?);
+    let mut parseds = Vec::new();
+    while !matches!(tokens.last(), Some(Token::Dot) | None) {
+        parseds.push(eval_expression(env, tokens)?);
     }
-    if values.is_empty() {
-        values.push(Value::Nil);
+    if parseds.is_empty() {
+        parseds.push(Parsed::Value(Value::Nil));
     }
-    applicate(env, values)
+    applicate(env, parseds)
 }
 
-fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Parsed> {
     match tokens.pop() {
         None => panic!("unexpected error: no token passed to eval_expression."),
         Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
@@ -132,16 +149,14 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut inner)?;
             let _ = env.vr_map.pop();
-            Ok(result)
+            Ok(Parsed::Value(result))
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
         Some(Token::Symbol(n)) => {
-            if let Some(n) = number::parse(&n) {
-                Ok(n)
-            } else if n.starts_with("\"") && n.ends_with("\"") {
-                Ok(Value::String(n[1..n.len() - 1].to_string()))
+            if let Some(n) = Value::from(&n) {
+                Ok(Parsed::Value(n))
             } else {
-                Ok(Value::Symbol(n))
+                Ok(Parsed::Label(n))
             }
         }
     }
@@ -153,10 +168,6 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
         Some(Token::Dot) => true,
         n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
     }
-}
-
-fn is_in_sentence(tokens: &[Token]) -> bool {
-    !matches!(tokens.last(), Some(Token::Dot) | None)
 }
 
 fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> {
@@ -176,60 +187,75 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
     None
 }
 
-fn applicate(env: &mut Environment, mut values: Vec<Value>) -> RResult<Value> {
-    values.reverse();
-    let mut itr = applicate_inner(env, &mut values)?.into_iter();
+fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
+    parseds.reverse();
+    let mut itr = applicate_inner(env, &mut parseds)?.into_iter();
     let r = itr
         .next()
         .expect("unexpected error: the result of application is empty.");
-    if !values.is_empty() || itr.next().is_some() {
+    if !parseds.is_empty() || itr.next().is_some() {
         println!("warn: unused arguments found.");
     }
     Ok(r)
 }
 
-fn applicate_inner(env: &mut Environment, values: &mut Vec<Value>) -> RResult<Vec<Value>> {
+fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Vec<Value>> {
     let mut args = Vec::new();
 
     // get subject
-    let s = values
+    let s = parseds
         .pop()
         .expect("unexpected error: no value passed to applicate.");
+    let s = resolve_label(env, s)?;
 
     // get verb
-    let Some(v) = values.pop() else {
+    let Some(v) = parseds.pop() else {
         args.push(s);
         return Ok(args);
     };
-    let Value::Symbol(v_sym) = &v else {
-        values.push(v);
+    let Parsed::Label(v_name) = &v else {
+        parseds.push(v);
         args.push(s);
         return Ok(args);
     };
 
     // get verb function
     let t = s.get_typeid(env);
-    if !env.fn_map.contains_key(&t) || !env.fn_map[&t].contains_key(v_sym) {
-        values.push(v);
+    if !env.fn_map.contains_key(&t) || !env.fn_map[&t].contains_key(v_name) {
+        parseds.push(v);
         args.push(s);
         return Ok(args);
     };
 
     // collect arguments
-    while !values.is_empty() {
-        let mut result = applicate_inner(env, values)?;
+    while !parseds.is_empty() {
+        let mut result = applicate_inner(env, parseds)?;
         args.append(&mut result);
     }
     args.reverse();
 
     // applicate
-    match env.fn_map[&t][v_sym] {
+    match env.fn_map[&t][v_name] {
         Function::Builtin(f) => (f)(env, s, &mut args)?,
     }
 
     // finish
     args.reverse();
     Ok(args)
+}
+
+fn resolve_label(env: &Environment, n: Parsed) -> RResult<Value> {
+    match n {
+        Parsed::Label(n) => {
+            if let Some(n) = env.get_variable(&n) {
+                // OPTIMIZE: remove clone.
+                Ok(n.value.clone())
+            } else {
+                Err(format!("error: undefined variable '{n}' found.").into())
+            }
+        }
+        Parsed::Value(n) => Ok(n),
+    }
 }
 
 #[cfg(test)]
@@ -277,14 +303,22 @@ mod test {
     #[test]
     fn test_not_symbol_not_function() {
         let mut env = Environment::default();
-        let values = Vec::from(&[Value::I32(1), Value::I32(0), Value::I32(2)]);
-        assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
+        let parseds = vec![
+            Parsed::Value(Value::I32(1)),
+            Parsed::Value(Value::I32(2)),
+            Parsed::Value(Value::I32(3)),
+        ];
+        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
     }
 
     #[test]
     fn test_undefined_function() {
         let mut env = Environment::default();
-        let values = Vec::from(&[Value::I32(1), Value::Symbol("a".to_string()), Value::I32(2)]);
-        assert_eq!(applicate(&mut env, values).unwrap(), Value::I32(1));
+        let parseds = vec![
+            Parsed::Value(Value::I32(1)),
+            Parsed::Label("a".to_string()),
+            Parsed::Value(Value::I32(2)),
+        ];
+        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
     }
 }
