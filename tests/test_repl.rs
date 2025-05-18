@@ -44,32 +44,47 @@ fn test_expression_ordered() {
 
 #[test]
 fn test_define_variable() {
-    run(
-        "12 => twelve.\ntwelve\n#exit",
-        ">> ()\n>> twelve <= 12 (i32)\n>> ",
-    );
+    run("12 => 'twelve.\ntwelve\n#exit", ">> ()\n>> 12 (i32)\n>> ");
 }
 
 #[test]
 fn test_define_symbol_variable() {
+    run("'a -> 'b.\nb\n#exit", ">> ()\n>> a (symbol)\n>> ");
+}
+
+#[test]
+fn test_define_defined_symbol_variable() {
     run(
-        "pi => foo.\n3.14f32 -> pi.\nfoo\n#exit",
-        ">> ()\n>> ()\n>> foo <= pi <- 3.14 (f32)\n>> ",
+        "'a -> 'b.\n24 -> 'a.\nb\n#exit",
+        ">> ()\n>> ()\n>> a <- 24 (i32)\n>> ",
     );
 }
 
 #[test]
-fn test_restrict_define_variable_same_scope() {
+fn test_redefine_variable_same_scope() {
     run(
-        "1 -> a.\n2 => a.\n3 => a.\n#exit",
-        ">> ()\n>> ()\n>> error: cannot redefine variable 'a'.\n>> ",
-    )
+        "1 -> 'a.\n2 => 'a.\na\n#exit",
+        ">> ()\n>> ()\n>> 2 (i32)\n>> ",
+    );
 }
 
 #[test]
-fn test_restrict_define_variable_upper_scope() {
+fn test_redefine_variable_upper_scope() {
+    run("1 -> 'a. (2 => 'a)\na\n#exit", ">> ()\n>> 1 (i32)\n>> ");
+}
+
+#[test]
+fn test_restrict_redefine_variable_same_scope() {
     run(
-        "(1 -> a. (2 => a. (3 -> a.)))\n#exit",
+        "1 => 'a.\n2 -> 'a.\n#exit",
+        ">> ()\n>> error: cannot redefine variable 'a'.\n>> ",
+    );
+}
+
+#[test]
+fn test_restrict_redefine_variable_upper_scope() {
+    run(
+        "1 => 'a. (2 -> 'a)\n#exit",
         ">> error: cannot redefine variable 'a'.\n>> ",
-    )
+    );
 }
