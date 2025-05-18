@@ -93,3 +93,8 @@ fn test_restrict_redefine_variable_upper_scope() {
         ">> error: cannot redefine variable 'a'.\n>> ",
     );
 }
+
+#[test]
+fn test_print() {
+    run("1 !\n2 !!\n#exit\n", ">> 11 (i32)\n>> 2\n2 (i32)\n>> ")
+}
