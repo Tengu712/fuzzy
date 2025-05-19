@@ -6,7 +6,7 @@ use crate::{
 use std::fs;
 
 pub fn run(path: String) -> RResult<()> {
-    let content = fs::read_to_string(path)?;
+    let content = fs::read_to_string(&path).map_err(|e| format!("error: {path}: {e}"))?;
     let mut tokens = lexer::lex(&content)?;
     let mut env = Environment::default();
     tokens.reverse();

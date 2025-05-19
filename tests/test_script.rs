@@ -13,3 +13,8 @@ fn run(path: &'static str, output: &'static str) {
 fn test_empty() {
     run("tests/scripts/empty.fuz", "");
 }
+
+#[test]
+fn test_hello_world() {
+    run("tests/scripts/hello-world.fuz", "Hello, world!\n");
+}
