@@ -10,8 +10,8 @@ pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &str) {
 
 macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
-        fn $fn(env: &mut Environment, s: Value, values: &mut Vec<Value>) -> RResult<()> {
-            let Some(Value::Symbol(n)) = values.pop() else {
+        fn $fn(env: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()> {
+            let Some(Value::Symbol(n)) = args.pop() else {
                 return Err(format!(
                     "error: no symbol argument passed to '{}:{}'.",
                     s.get_typeid(env),
@@ -30,7 +30,7 @@ macro_rules! define_variable_definition {
                 .last_mut()
                 .expect("variable map stack is empty.")
                 .insert(n, v);
-            values.push(Value::Nil);
+            args.push(Value::Nil);
             Ok(())
         }
     };
