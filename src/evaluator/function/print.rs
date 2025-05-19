@@ -3,7 +3,7 @@ use super::*;
 pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
     let map = maps
         .get_mut(ty)
-        .unwrap_or_else(|| panic!("unexpected error: function map for '{ty}' not found."));
+        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
     map.insert("!".to_string(), Function::Builtin(print));
     map.insert("!!".to_string(), Function::Builtin(println));
 }

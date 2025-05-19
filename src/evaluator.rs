@@ -140,8 +140,8 @@ fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Valu
 
 fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Parsed> {
     match tokens.pop() {
-        None => panic!("unexpected error: no token passed to eval_expression."),
-        Some(Token::Dot) => panic!("unexpected error: Token::Dot passed to eval_expression."),
+        None => panic!("no token passed to eval_expression."),
+        Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
         Some(Token::Comma) => Ok(Parsed::Comma),
         Some(Token::LParen) => {
             let Some(mut inner) = extract_parenthesized_content(tokens) else {
@@ -167,7 +167,7 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
     match tokens.pop() {
         None => false,
         Some(Token::Dot) => true,
-        n => panic!("unexpected error: '{n:?}' found immediately after sentence."),
+        n => panic!("'{n:?}' found immediately after sentence."),
     }
 }
 
@@ -201,9 +201,7 @@ fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
 
 fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
     let mut itr = applicate_inner(env, &mut parseds)?.into_iter();
-    let r = itr
-        .next()
-        .expect("unexpected error: the result of application is empty.");
+    let r = itr.next().expect("the result of application is empty.");
     if !parseds.is_empty() || itr.next().is_some() {
         println!("warn: unused arguments found.");
     }
