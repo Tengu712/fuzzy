@@ -18,3 +18,8 @@ fn test_empty() {
 fn test_hello_world() {
     run("tests/scripts/hello-world.fuz", "Hello, world!\n");
 }
+
+#[test]
+fn test_variable() {
+    run("tests/scripts/variable.fuz", "1225\n25\n72\n");
+}
