@@ -1,66 +1,6 @@
 use super::*;
 
-macro_rules! insert_numeric_function {
-    ($maps: expr, $rsfn: ident, $fn: expr, $rsty: ty) => {
-        $maps
-            .get_mut(stringify!($rsty))
-            .unwrap()
-            .insert($fn.to_string(), Function::Builtin($rsfn::<$rsty>));
-    };
-}
-
-macro_rules! define_numeric_function {
-    ($trait: ident, $fn: ident, $name: expr) => {
-        fn $fn<T>(_: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()>
-        where
-            T: FromValue + IntoValue + $trait<Output = T>,
-        {
-            let Some(f) = T::from_value(&s) else {
-                panic!("subject type missmatch.");
-            };
-            let Some(o) = args.pop() else {
-                return Err(format!(
-                    "error: no argument passed to '{}:{}'.",
-                    stringify!($fn),
-                    $name
-                )
-                .into());
-            };
-            let Some(l) = T::from_value(&o) else {
-                return Err(format!(
-                    "error: type missmatched argument passed to '{}:{}'.",
-                    stringify!($fn),
-                    $name
-                )
-                .into());
-            };
-            args.push($trait::$fn(f, l).into_value());
-            Ok(())
-        }
-    };
-}
-define_numeric_function!(Add, add, "+");
-define_numeric_function!(Sub, sub, "-");
-define_numeric_function!(Mul, mul, "*");
-define_numeric_function!(Div, div, "/");
-
 macro_rules! for_all_numeric_types {
-    ($macro: ident $(, $($arg: tt)*)?) => {
-        $macro!($($($arg)*, )? i8);
-        $macro!($($($arg)*, )? u8);
-        $macro!($($($arg)*, )? i16);
-        $macro!($($($arg)*, )? u16);
-        $macro!($($($arg)*, )? i32);
-        $macro!($($($arg)*, )? u32);
-        $macro!($($($arg)*, )? i64);
-        $macro!($($($arg)*, )? u64);
-        $macro!($($($arg)*, )? i128);
-        $macro!($($($arg)*, )? u128);
-        $macro!($($($arg)*, )? f32);
-        $macro!($($($arg)*, )? f64);
-    };
-}
-macro_rules! for_all_numeric_types_and_variants {
     ($macro: ident $(, $($arg: tt)*)?) => {
         $macro!($($($arg)*, )? i8, I8);
         $macro!($($($arg)*, )? u8, U8);
@@ -77,40 +17,47 @@ macro_rules! for_all_numeric_types_and_variants {
     };
 }
 
-trait FromValue: Sized {
-    fn from_value(value: &Value) -> Option<Self>;
-}
-macro_rules! implement_fromvalue {
-    ($rsty: ty, $var: ident) => {
-        impl FromValue for $rsty {
-            fn from_value(value: &Value) -> Option<Self> {
-                match value {
-                    Value::$var(n) => Some(*n),
-                    _ => None,
-                }
-            }
-        }
+macro_rules! insert_numeric_function {
+    ($maps: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
+        $maps
+            .get_mut(stringify!($ty))
+            .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
+            .insert(
+                stringify!($op).to_string(),
+                Function::Builtin(paste::item! {[<$fn $ty>]}),
+            );
     };
 }
-for_all_numeric_types_and_variants!(implement_fromvalue);
-
-trait IntoValue: Sized {
-    fn into_value(self) -> Value;
-}
-macro_rules! implement_intovalue {
-    ($rsty: ty, $var: ident) => {
-        impl IntoValue for $rsty {
-            fn into_value(self) -> Value {
-                Value::$var(self)
-            }
-        }
-    };
-}
-for_all_numeric_types_and_variants!(implement_intovalue);
 
 pub fn insert_numeric_functions(maps: &mut FunctionMap) {
-    for_all_numeric_types!(insert_numeric_function, maps, add, "+");
-    for_all_numeric_types!(insert_numeric_function, maps, sub, "-");
-    for_all_numeric_types!(insert_numeric_function, maps, mul, "*");
-    for_all_numeric_types!(insert_numeric_function, maps, div, "/");
+    for_all_numeric_types!(insert_numeric_function, maps, add, +);
+    for_all_numeric_types!(insert_numeric_function, maps, sub, -);
+    for_all_numeric_types!(insert_numeric_function, maps, mul, *);
+    for_all_numeric_types!(insert_numeric_function, maps, div, /);
 }
+
+macro_rules! define_numeric_function {
+    ($fn: ident, $op: tt, $ty: ident, $variant: ident) => {
+        paste::item! {
+        fn [<$fn $ty>](_: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()> {
+            let Value::$variant(s) = s else {
+                panic!("subject type missmatch.");
+            };
+            let Some(Value::$variant(o)) = args.pop() else {
+                return Err(format!(
+                    "error: no argument passed to '{}:{}'.",
+                    stringify!($ty),
+                    stringify!($op),
+                )
+                .into());
+            };
+            args.push(Value::$variant(s $op o));
+            Ok(())
+        }
+        }
+    };
+}
+for_all_numeric_types!(define_numeric_function, add, +);
+for_all_numeric_types!(define_numeric_function, sub, -);
+for_all_numeric_types!(define_numeric_function, mul, *);
+for_all_numeric_types!(define_numeric_function, div, /);

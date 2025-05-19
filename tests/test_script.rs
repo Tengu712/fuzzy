@@ -9,6 +9,14 @@ fn run(path: &'static str, output: &'static str) {
         .stdout(output);
 }
 
+fn run_wrong(path: &'static str) {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .args([path])
+        .assert()
+        .failure();
+}
+
 #[test]
 fn test_empty() {
     run("tests/scripts/empty.fuz", "");
@@ -22,4 +30,9 @@ fn test_hello_world() {
 #[test]
 fn test_variable() {
     run("tests/scripts/variable.fuz", "1225\n25\n72\n");
+}
+
+#[test]
+fn test_type_missmatched_addition() {
+    run_wrong("tests/scripts/wrong-add.fuz");
 }

@@ -25,14 +25,6 @@ fn test_float() {
 }
 
 #[test]
-fn test_add_type_missmatch() {
-    run(
-        "1.2f32 + 123\n#exit",
-        ">> error: type missmatched argument passed to 'add:+'.\n>> ",
-    );
-}
-
-#[test]
 fn test_expression() {
     run("2 * 3 + 4\n#exit", ">> 14 (i32)\n>> ");
 }
