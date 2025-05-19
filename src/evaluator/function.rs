@@ -80,7 +80,7 @@ macro_rules! define_numeric_function {
             T: FromValue + IntoValue + $trait<Output = T>,
         {
             let Some(f) = T::from_value(&s) else {
-                panic!("unexpected error: subject type missmatch.");
+                panic!("subject type missmatch.");
             };
             let Some(o) = values.pop() else {
                 return Err(format!(
