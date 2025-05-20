@@ -36,7 +36,7 @@ impl Value {
         }
     }
 
-    fn get_typeid(&self, env: &Environment) -> String {
+    fn get_typeid(&self) -> String {
         match self {
             Self::Nil => "nil".to_string(),
             Self::I8(_) => "i8".to_string(),
@@ -52,14 +52,7 @@ impl Value {
             Self::F32(_) => "f32".to_string(),
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
-            Self::Symbol(n) => {
-                for m in env.vr_map.iter().rev() {
-                    if let Some(v) = m.get(n) {
-                        return v.value.get_typeid(env);
-                    }
-                }
-                "symbol".to_string()
-            }
+            Self::Symbol(_) => "symbol".to_string(),
         }
     }
 }
@@ -69,8 +62,13 @@ pub struct Variable {
     pub mutable: bool,
 }
 
-pub enum Function {
-    Builtin(fn(&mut Environment, Value, &mut Vec<Value>) -> RResult<()>),
+pub enum FunctionCode {
+    Builtin(fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>),
+}
+
+pub struct Function {
+    pub types: Vec<String>,
+    pub code: FunctionCode,
 }
 
 pub type FunctionMap = HashMap<String, HashMap<String, Function>>;
@@ -199,18 +197,36 @@ fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
         })
 }
 
-fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
-    let mut itr = applicate_inner(env, &mut parseds)?.into_iter();
-    let r = itr.next().expect("the result of application is empty.");
-    if !parseds.is_empty() || itr.next().is_some() {
-        println!("warn: unused arguments found.");
+pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+    let f = env
+        .fn_map
+        .get(t)
+        .and_then(|n| n.get(v))
+        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{t}'"));
+    if f.types.len() > args.len() {
+        Ok(false)
+    } else if f
+        .types
+        .iter()
+        .zip(args.iter())
+        .all(|(n, m)| n == &m.get_typeid())
+    {
+        Ok(true)
+    } else {
+        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
     }
-    Ok(r)
 }
 
-fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Vec<Value>> {
-    let mut args = Vec::new();
+fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
+    loop {
+        let result = applicate_inner(env, &mut parseds)?;
+        if parseds.is_empty() {
+            return Ok(result);
+        }
+    }
+}
 
+fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Value> {
     // get subject
     let s = if let Some(n) = extract_until_comma(parseds) {
         applicate(env, n)?
@@ -232,38 +248,38 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
 
     // get verb
     let Some(v) = parseds.pop() else {
-        args.push(s);
-        return Ok(args);
+        return Ok(s);
     };
     let Parsed::Label(v_name) = &v else {
         parseds.push(v);
-        args.push(s);
-        return Ok(args);
+        return Ok(s);
     };
 
     // get verb function
-    let t = s.get_typeid(env);
+    let t = s.get_typeid();
     if !env.fn_map.contains_key(&t) || !env.fn_map[&t].contains_key(v_name) {
         parseds.push(v);
-        args.push(s);
-        return Ok(args);
+        return Ok(s);
     };
 
     // collect arguments
-    while !parseds.is_empty() {
-        let mut result = applicate_inner(env, parseds)?;
-        args.append(&mut result);
+    let mut args = Vec::new();
+    loop {
+        if check_argument_types(env, &t, v_name, &args)? {
+            break;
+        }
+        if parseds.is_empty() {
+            return Err(format!("error: too few arguments passed to '{t}' on '{v_name}'.").into());
+        }
+        args.push(applicate_inner(env, parseds)?);
     }
     args.reverse();
 
     // applicate
-    match env.fn_map[&t][v_name] {
-        Function::Builtin(f) => (f)(env, s, &mut args)?,
-    }
-
-    // finish
-    args.reverse();
-    Ok(args)
+    let result = match env.fn_map[&t][v_name].code {
+        FunctionCode::Builtin(f) => (f)(env, s, args)?,
+    };
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -324,7 +340,7 @@ mod test {
     }
 
     #[test]
-    fn test_not_symbol_not_function() {
+    fn test_no_dot_return_last_result() {
         let mut env = Environment::default();
         let mut parseds = vec![
             Parsed::Value(Value::I32(1)),
@@ -332,18 +348,14 @@ mod test {
             Parsed::Value(Value::I32(3)),
         ];
         parseds.reverse();
-        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
+        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(3));
     }
 
     #[test]
-    fn test_undefined_function() {
+    fn test_few_arguments() {
         let mut env = Environment::default();
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Label("a".to_string()),
-            Parsed::Value(Value::I32(2)),
-        ];
+        let mut parseds = vec![Parsed::Value(Value::I32(1)), Parsed::Label("+".to_string())];
         parseds.reverse();
-        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(1));
+        applicate(&mut env, parseds).unwrap_err();
     }
 }

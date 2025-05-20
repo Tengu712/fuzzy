@@ -1,19 +1,19 @@
 -- Defining variables test. --
 
 -- `i32` has a `->` function.
--- NOTE: Since fuzzy doesn't support assignment,
+-- NOTE: Since Fuzzy doesn't support assignment,
 --       variables must be redefined each time to update them.
 12 -> 'a.
-a !.
+a !
 
 -- `i32` has a `=>` function.
 -- Consequently, you cannot define a variable named 'a'
 -- within this scope or any nested scopes below it.
 25 -> 'a.
-a !!.
+a !!
 
 -- Although unrelated to the purpose of this test,
 -- `!` and `!!` functions return the printed value directly.
 -- This might be useful for debugging.
-47 + a !!.
-47 + a, !!.
+47 + a !!
+47 + a, !!

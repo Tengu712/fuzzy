@@ -4,20 +4,27 @@ pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &str) {
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
-    map.insert("->".to_string(), Function::Builtin(define_mutable));
-    map.insert("=>".to_string(), Function::Builtin(define_immutable));
+    map.insert(
+        "->".to_string(),
+        Function {
+            types: vec!["symbol".to_string()],
+            code: FunctionCode::Builtin(define_mutable),
+        },
+    );
+    map.insert(
+        "=>".to_string(),
+        Function {
+            types: vec!["symbol".to_string()],
+            code: FunctionCode::Builtin(define_immutable),
+        },
+    );
 }
 
 macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
-        fn $fn(env: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()> {
+        fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
             let Some(Value::Symbol(n)) = args.pop() else {
-                return Err(format!(
-                    "error: no symbol argument passed to '{}:{}'.",
-                    s.get_typeid(env),
-                    $name
-                )
-                .into());
+                panic!("type missmatched on '{}:{}'.", s.get_typeid(), $name);
             };
             if !can_define(env, &n) {
                 return Err(format!("error: cannot redefine variable '{n}'.").into());
@@ -30,8 +37,7 @@ macro_rules! define_variable_definition {
                 .last_mut()
                 .expect("variable map stack is empty.")
                 .insert(n, v);
-            args.push(Value::Nil);
-            Ok(())
+            Ok(Value::Nil)
         }
     };
 }
