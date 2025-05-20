@@ -1,0 +1,15 @@
+-- Getting symbol value test. --
+
+-- subject.
+1 -> 'a.
+'a $, !!
+
+-- verb.
+1 ('+ $) 2, !!
+'+ -> 'add.
+1 (add $) 2, !!
+1 ('add $, $) 2, !!
+
+-- object.
+2 -> 'a.
+1 + 'a $, !!

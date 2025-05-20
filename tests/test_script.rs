@@ -38,6 +38,26 @@ fn test_implicit_comma() {
 }
 
 #[test]
+fn test_symbol_value() {
+    run("tests/scripts/symbol-value.fuz", "1\n3\n3\n3\n3\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
+}
+
+#[test]
+fn test_undefined_value_of_symbol_subject() {
+    run_wrong("tests/scripts/wrong-symbol-value-subject.fuz");
+}
+
+#[test]
+fn test_undefined_value_of_symbol_verb() {
+    run_wrong("tests/scripts/wrong-symbol-value-verb.fuz");
+}
+
+#[test]
+fn test_undefined_value_of_symbol_object() {
+    run_wrong("tests/scripts/wrong-symbol-value-object.fuz");
 }

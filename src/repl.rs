@@ -72,6 +72,7 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
+            Self::ExpansionSymbol(_) => panic!("tried to format expansion symbol."),
         }
     }
 }

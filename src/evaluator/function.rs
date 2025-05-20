@@ -1,5 +1,6 @@
 mod numeric;
 mod print;
+mod symbol;
 mod variable;
 
 use super::*;
@@ -21,6 +22,7 @@ pub fn setup() -> FunctionMap {
     }
 
     numeric::insert_numeric_functions(&mut maps);
+    symbol::insert_symbol_value(&mut maps);
 
     maps
 }
