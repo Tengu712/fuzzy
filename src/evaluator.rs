@@ -21,18 +21,19 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
+    Label(String),
 }
 
 impl Value {
-    fn from(s: &str) -> Option<Self> {
+    fn from(s: &str) -> Self {
         if let Some(n) = number::parse(s) {
-            Some(n)
+            n
         } else if s.starts_with("\"") && s.ends_with("\"") {
-            Some(Value::String(s[1..s.len() - 1].to_string()))
+            Self::String(s[1..s.len() - 1].to_string())
         } else if s.starts_with("'") {
-            Some(Value::Symbol(s[1..s.len()].to_string()))
+            Self::Symbol(s[1..s.len()].to_string())
         } else {
-            None
+            Self::Label(s.to_string())
         }
     }
 
@@ -53,6 +54,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
+            Self::Label(_) => panic!("tried to get type of label."),
         }
     }
 }
@@ -92,12 +94,20 @@ impl Environment {
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
         self.vr_map.iter().rev().filter_map(|n| n.get(name)).next()
     }
+
+    pub fn get_variable_unwrap(&self, name: &str) -> RResult<Value> {
+        if let Some(n) = self.get_variable(name) {
+            // OPTIMIZE: remove clone.
+            Ok(n.value.clone())
+        } else {
+            Err(format!("error: undefined variable '{name}' found.").into())
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 enum Parsed {
     Comma,
-    Label(String),
     Value(Value),
 }
 
@@ -151,13 +161,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Pa
             Ok(Parsed::Value(result))
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::Symbol(n)) => {
-            if let Some(n) = Value::from(&n) {
-                Ok(Parsed::Value(n))
-            } else {
-                Ok(Parsed::Label(n))
-            }
-        }
+        Some(Token::Symbol(n)) => Ok(Parsed::Value(Value::from(&n))),
     }
 }
 
@@ -171,11 +175,11 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
 
 fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> {
     let mut depth = 0;
-    for (i, t) in tokens.iter().enumerate() {
-        match t {
+    for i in (0..tokens.len()).rev() {
+        match tokens[i] {
             Token::RParen if depth == 0 => {
-                let result = tokens.split_off(i + 1);
-                tokens.pop();
+                let mut result = tokens.split_off(i);
+                result.remove(0);
                 return Some(result);
             }
             Token::RParen => depth -= 1,
@@ -184,6 +188,13 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
         }
     }
     None
+}
+
+fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
+    match n {
+        Value::Label(n) => env.get_variable_unwrap(&n),
+        n => Ok(n),
+    }
 }
 
 fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
@@ -229,28 +240,22 @@ fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> 
 fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Value> {
     // get subject
     let s = if let Some(n) = extract_until_comma(parseds) {
-        applicate(env, n)?
+        let result = applicate(env, n)?;
+        expand_label(env, result)?
+    } else if let Some(n) = parseds.pop() {
+        let Parsed::Value(n) = n else {
+            panic!("unexpected subject '{n:?}'.");
+        };
+        expand_label(env, n)?
     } else {
-        match parseds.pop() {
-            None => Value::Nil,
-            Some(Parsed::Comma) => return Err("error: comma cannot be the subject.".into()),
-            Some(Parsed::Label(n)) => {
-                if let Some(n) = env.get_variable(&n) {
-                    // OPTIMIZE: remove clone.
-                    n.value.clone()
-                } else {
-                    return Err(format!("error: undefined variable '{n}' found.").into());
-                }
-            }
-            Some(Parsed::Value(n)) => n,
-        }
+        Value::Nil
     };
 
     // get verb
     let Some(v) = parseds.pop() else {
         return Ok(s);
     };
-    let Parsed::Label(v_name) = &v else {
+    let Parsed::Value(Value::Label(v_name)) = &v else {
         parseds.push(v);
         return Ok(s);
     };
@@ -271,7 +276,9 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
         if parseds.is_empty() {
             return Err(format!("error: too few arguments passed to '{t}' on '{v_name}'.").into());
         }
-        args.push(applicate_inner(env, parseds)?);
+        let arg = applicate_inner(env, parseds)?;
+        let arg = expand_label(env, arg)?;
+        args.push(arg);
     }
     args.reverse();
 
@@ -295,10 +302,11 @@ mod test {
             Token::Symbol("2".to_string()),
         ];
         tokens.reverse();
-        let mut expect = vec![Token::Symbol("1".to_string())];
-        expect.reverse();
+        let result_expect = vec![Token::Symbol("1".to_string())];
+        let tokens_expect = vec![Token::Symbol("2".to_string())];
         let result = extract_parenthesized_content(&mut tokens).unwrap();
-        assert_eq!(result, expect);
+        assert_eq!(tokens, tokens_expect);
+        assert_eq!(result, result_expect);
     }
 
     #[test]
@@ -313,15 +321,34 @@ mod test {
             Token::Symbol("3".to_string()),
         ];
         tokens.reverse();
-        let mut expect = vec![
-            Token::Symbol("1".to_string()),
-            Token::LParen,
+        let result_expect = vec![
+            Token::RParen,
             Token::Symbol("2".to_string()),
+            Token::LParen,
+            Token::Symbol("1".to_string()),
+        ];
+        let tokens_expect = vec![Token::Symbol("3".to_string())];
+        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        assert_eq!(tokens, tokens_expect);
+        assert_eq!(result, result_expect);
+    }
+
+    #[test]
+    fn test_continuous_parenthesis() {
+        let mut tokens = vec![
+            // Token::LParen,
+            Token::Symbol("1".to_string()),
+            Token::RParen,
+            Token::LParen,
+            Token::Symbol("3".to_string()),
             Token::RParen,
         ];
-        expect.reverse();
+        tokens.reverse();
+        let result_expect = vec![Token::Symbol("1".to_string())];
+        let tokens_expect = vec![Token::RParen, Token::Symbol("3".to_string()), Token::LParen];
         let result = extract_parenthesized_content(&mut tokens).unwrap();
-        assert_eq!(result, expect);
+        assert_eq!(tokens, tokens_expect);
+        assert_eq!(result, result_expect);
     }
 
     #[test]
@@ -354,7 +381,10 @@ mod test {
     #[test]
     fn test_few_arguments() {
         let mut env = Environment::default();
-        let mut parseds = vec![Parsed::Value(Value::I32(1)), Parsed::Label("+".to_string())];
+        let mut parseds = vec![
+            Parsed::Value(Value::I32(1)),
+            Parsed::Value(Value::Label("+".to_string())),
+        ];
         parseds.reverse();
         applicate(&mut env, parseds).unwrap_err();
     }

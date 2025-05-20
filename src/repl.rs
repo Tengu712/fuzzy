@@ -72,6 +72,7 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
+            Self::Label(_) => panic!("tried to format label."),
         }
     }
 }
