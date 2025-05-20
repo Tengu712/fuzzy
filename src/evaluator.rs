@@ -25,15 +25,15 @@ pub enum Value {
 }
 
 impl Value {
-    fn from(s: &str) -> Option<Self> {
+    fn from(s: &str) -> Self {
         if let Some(n) = number::parse(s) {
-            Some(n)
+            n
         } else if s.starts_with("\"") && s.ends_with("\"") {
-            Some(Value::String(s[1..s.len() - 1].to_string()))
+            Self::String(s[1..s.len() - 1].to_string())
         } else if s.starts_with("'") {
-            Some(Value::Symbol(s[1..s.len()].to_string()))
+            Self::Symbol(s[1..s.len()].to_string())
         } else {
-            None
+            Self::ExpansionSymbol(s.to_string())
         }
     }
 
@@ -108,7 +108,6 @@ impl Environment {
 #[derive(Debug, Clone, PartialEq)]
 enum Parsed {
     Comma,
-    Label(String),
     Value(Value),
 }
 
@@ -162,13 +161,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Pa
             Ok(Parsed::Value(result))
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::Symbol(n)) => {
-            if let Some(n) = Value::from(&n) {
-                Ok(Parsed::Value(n))
-            } else {
-                Ok(Parsed::Label(n))
-            }
-        }
+        Some(Token::Symbol(n)) => Ok(Parsed::Value(Value::from(&n))),
     }
 }
 
@@ -195,14 +188,6 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
         }
     }
     None
-}
-
-fn expand_label(env: &Environment, n: Parsed) -> RResult<Value> {
-    match n {
-        Parsed::Comma => panic!("comma found"),
-        Parsed::Label(n) => env.get_variable_unwrap(&n),
-        Parsed::Value(n) => expand_symbol(env, n),
-    }
 }
 
 fn expand_symbol(env: &Environment, n: Value) -> RResult<Value> {
@@ -258,7 +243,10 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
         let result = applicate(env, n)?;
         expand_symbol(env, result)?
     } else if let Some(n) = parseds.pop() {
-        expand_label(env, n)?
+        let Parsed::Value(n) = n else {
+            panic!("unexpected subject '{n:?}'.");
+        };
+        expand_symbol(env, n)?
     } else {
         Value::Nil
     };
@@ -267,12 +255,9 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let Some(v) = parseds.pop() else {
         return Ok(s);
     };
-    let v_name = match &v {
-        Parsed::Label(n) | Parsed::Value(Value::ExpansionSymbol(n)) => n,
-        _ => {
-            parseds.push(v);
-            return Ok(s);
-        }
+    let Parsed::Value(Value::ExpansionSymbol(v_name)) = &v else {
+        parseds.push(v);
+        return Ok(s);
     };
 
     // get verb function
@@ -396,7 +381,10 @@ mod test {
     #[test]
     fn test_few_arguments() {
         let mut env = Environment::default();
-        let mut parseds = vec![Parsed::Value(Value::I32(1)), Parsed::Label("+".to_string())];
+        let mut parseds = vec![
+            Parsed::Value(Value::I32(1)),
+            Parsed::Value(Value::ExpansionSymbol("+".to_string())),
+        ];
         parseds.reverse();
         applicate(&mut env, parseds).unwrap_err();
     }
