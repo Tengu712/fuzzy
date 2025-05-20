@@ -4,13 +4,25 @@ pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
-    map.insert("!".to_string(), Function::Builtin(print));
-    map.insert("!!".to_string(), Function::Builtin(println));
+    map.insert(
+        "!".to_string(),
+        Function {
+            types: Vec::new(),
+            code: FunctionCode::Builtin(print),
+        },
+    );
+    map.insert(
+        "!!".to_string(),
+        Function {
+            types: Vec::new(),
+            code: FunctionCode::Builtin(println),
+        },
+    );
 }
 
 macro_rules! define_print {
     ($fn: ident) => {
-        fn $fn(_: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()> {
+        fn $fn(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
             match &s {
                 Value::Nil => $fn!("()"),
                 Value::I8(n) => $fn!("{n}"),
@@ -28,8 +40,7 @@ macro_rules! define_print {
                 Value::String(n) => $fn!("{n}"),
                 Value::Symbol(n) => $fn!("{n}"),
             }
-            args.push(s);
-            Ok(())
+            Ok(s)
         }
     };
 }

@@ -1,0 +1,5 @@
+-- Implicit statement termination test. --
+
+-- Fuzzy consumes arguments based on the function's signature,
+-- so a statement terminator `.` isn't always necessary.
+12 -> 'a 25 -> 'b a * b, !!

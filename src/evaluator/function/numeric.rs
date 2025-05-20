@@ -24,7 +24,10 @@ macro_rules! insert_numeric_function {
             .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
             .insert(
                 stringify!($op).to_string(),
-                Function::Builtin(paste::item! {[<$fn $ty>]}),
+                Function {
+                    types: vec![stringify!($ty).to_string()],
+                    code: FunctionCode::Builtin(paste::item! {[<$fn $ty>]}),
+                },
             );
     };
 }
@@ -39,21 +42,12 @@ pub fn insert_numeric_functions(maps: &mut FunctionMap) {
 macro_rules! define_numeric_function {
     ($fn: ident, $op: tt, $ty: ident, $variant: ident) => {
         paste::item! {
-        fn [<$fn $ty>](_: &mut Environment, s: Value, args: &mut Vec<Value>) -> RResult<()> {
-            let Value::$variant(s) = s else {
-                panic!("subject type missmatch.");
-            };
-            let Some(Value::$variant(o)) = args.pop() else {
-                return Err(format!(
-                    "error: no argument passed to '{}:{}'.",
-                    stringify!($ty),
-                    stringify!($op),
-                )
-                .into());
-            };
-            args.push(Value::$variant(s $op o));
-            Ok(())
-        }
+            fn [<$fn $ty>](_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+                let (Value::$variant(s), Some(Value::$variant(o))) = (s, args.pop()) else {
+                    panic!("type missmatched on '{}:{}'", stringify!($ty), stringify!($op));
+                };
+                Ok(Value::$variant(s $op o))
+            }
         }
     };
 }

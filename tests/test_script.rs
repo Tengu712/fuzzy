@@ -33,6 +33,11 @@ fn test_variable() {
 }
 
 #[test]
+fn test_implicit_comma() {
+    run("tests/scripts/implicit-comma.fuz", "300\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
