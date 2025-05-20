@@ -21,7 +21,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
-    ExpansionSymbol(String),
+    Label(String),
 }
 
 impl Value {
@@ -33,7 +33,7 @@ impl Value {
         } else if s.starts_with("'") {
             Self::Symbol(s[1..s.len()].to_string())
         } else {
-            Self::ExpansionSymbol(s.to_string())
+            Self::Label(s.to_string())
         }
     }
 
@@ -54,7 +54,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
-            Self::ExpansionSymbol(_) => panic!("tried to get type of expansion symbol."),
+            Self::Label(_) => panic!("tried to get type of label."),
         }
     }
 }
@@ -190,9 +190,9 @@ fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> 
     None
 }
 
-fn expand_symbol(env: &Environment, n: Value) -> RResult<Value> {
+fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     match n {
-        Value::ExpansionSymbol(n) => env.get_variable_unwrap(&n),
+        Value::Label(n) => env.get_variable_unwrap(&n),
         n => Ok(n),
     }
 }
@@ -241,12 +241,12 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     // get subject
     let s = if let Some(n) = extract_until_comma(parseds) {
         let result = applicate(env, n)?;
-        expand_symbol(env, result)?
+        expand_label(env, result)?
     } else if let Some(n) = parseds.pop() {
         let Parsed::Value(n) = n else {
             panic!("unexpected subject '{n:?}'.");
         };
-        expand_symbol(env, n)?
+        expand_label(env, n)?
     } else {
         Value::Nil
     };
@@ -255,7 +255,7 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let Some(v) = parseds.pop() else {
         return Ok(s);
     };
-    let Parsed::Value(Value::ExpansionSymbol(v_name)) = &v else {
+    let Parsed::Value(Value::Label(v_name)) = &v else {
         parseds.push(v);
         return Ok(s);
     };
@@ -277,7 +277,7 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
             return Err(format!("error: too few arguments passed to '{t}' on '{v_name}'.").into());
         }
         let arg = applicate_inner(env, parseds)?;
-        let arg = expand_symbol(env, arg)?;
+        let arg = expand_label(env, arg)?;
         args.push(arg);
     }
     args.reverse();
@@ -383,7 +383,7 @@ mod test {
         let mut env = Environment::default();
         let mut parseds = vec![
             Parsed::Value(Value::I32(1)),
-            Parsed::Value(Value::ExpansionSymbol("+".to_string())),
+            Parsed::Value(Value::Label("+".to_string())),
         ];
         parseds.reverse();
         applicate(&mut env, parseds).unwrap_err();

@@ -15,7 +15,7 @@ pub fn insert_symbol_value(maps: &mut FunctionMap) {
 
 fn symbol_value(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     if let Value::Symbol(n) = s {
-        Ok(Value::ExpansionSymbol(n))
+        Ok(Value::Label(n))
     } else {
         panic!("type missmatched on 'symbol:$'.");
     }
