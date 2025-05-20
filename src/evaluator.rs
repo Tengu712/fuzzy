@@ -1,4 +1,3 @@
-mod check;
 mod function;
 mod number;
 
@@ -198,6 +197,26 @@ fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
         })
 }
 
+pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+    let f = env
+        .fn_map
+        .get(t)
+        .and_then(|n| n.get(v))
+        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{t}'"));
+    if f.types.len() > args.len() {
+        Ok(false)
+    } else if f
+        .types
+        .iter()
+        .zip(args.iter())
+        .all(|(n, m)| n == &m.get_typeid())
+    {
+        Ok(true)
+    } else {
+        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
+    }
+}
+
 fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
     loop {
         let result = applicate_inner(env, &mut parseds)?;
@@ -246,15 +265,8 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     // collect arguments
     let mut args = Vec::new();
     loop {
-        match check::check_argument_types(env, &t, v_name, &args) {
-            check::ArgumentCheckResult::Ok => break,
-            check::ArgumentCheckResult::Pending => (),
-            check::ArgumentCheckResult::Wrong => {
-                return Err(format!(
-                    "error: type missmatched arguments passed to '{t}' on '{v_name}'."
-                )
-                .into());
-            }
+        if check_argument_types(env, &t, v_name, &args)? {
+            break;
         }
         if parseds.is_empty() {
             return Err(format!("error: too few arguments passed to '{t}' on '{v_name}'.").into());
