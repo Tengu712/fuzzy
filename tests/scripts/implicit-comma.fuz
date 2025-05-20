@@ -2,4 +2,11 @@
 
 -- Fuzzy consumes arguments based on the function's signature,
 -- so a statement terminator `.` isn't always necessary.
+
+-- This code is interpreted similarly to the following:
+-- ```
+-- 12 -> 'a.
+-- 25 -> 'b.
+-- a * b, !!
+-- ```
 12 -> 'a 25 -> 'b a * b, !!
