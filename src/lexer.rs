@@ -22,11 +22,16 @@ impl Token {
 }
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
-    let tokens = Regex::new(r#""[^"]*"|[()]|\S+|\.|,"#)?
-        .find_iter(code)
-        .flat_map(|n| split_trailing_signs(n.as_str()))
-        .map(Token::from)
-        .collect::<Vec<Token>>();
+    let mut tokens = Vec::new();
+    let regex = Regex::new(r#""[^"]*"|[()]|\S+|\.|,"#)?;
+    for l in code.lines() {
+        let l = l.find("--").map(|n| &l[..n]).unwrap_or(l);
+        let i = regex
+            .find_iter(l)
+            .flat_map(|n| split_trailing_signs(n.as_str()))
+            .map(Token::from);
+        tokens.extend(i);
+    }
     Ok(tokens)
 }
 
@@ -89,6 +94,12 @@ mod test {
     #[test]
     fn test_comma() {
         let tokens = lex("1 + 2, * 3").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_comment() {
+        let tokens = lex("-- head\n1 + 2. -- middle\n3 * 4 --tail").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 }
