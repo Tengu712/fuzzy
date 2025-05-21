@@ -105,12 +105,6 @@ impl Environment {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum Parsed {
-    Comma,
-    Value(Value),
-}
-
 /// A function to evaluate a block.
 ///
 /// * `env` - The current environment.
@@ -138,19 +132,36 @@ pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Val
 }
 
 fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut parseds = Vec::new();
-    while !matches!(tokens.last(), Some(Token::Dot) | None) {
-        parseds.push(eval_expression(env, tokens)?);
+    let mut temp = None;
+    loop {
+        // handover temp
+        let mut values = Vec::new();
+        if let Some(n) = temp {
+            values.push(n);
+        }
+
+        // evaluate until separator
+        while !matches!(tokens.last(), Some(Token::Dot) | Some(Token::Comma) | None) {
+            values.push(eval_expression(env, tokens)?);
+        }
+        values.reverse();
+        let result = applicate(env, values)?;
+
+        // continue?
+        if matches!(tokens.last(), Some(Token::Comma)) {
+            tokens.pop().unwrap();
+            temp = Some(result);
+        } else {
+            return Ok(result);
+        }
     }
-    parseds.reverse();
-    applicate(env, parseds)
 }
 
-fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Parsed> {
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     match tokens.pop() {
         None => panic!("no token passed to eval_expression."),
         Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
-        Some(Token::Comma) => Ok(Parsed::Comma),
+        Some(Token::Comma) => panic!("Token::Comma passed to eval_expression."),
         Some(Token::LParen) => {
             let Some(mut inner) = extract_parenthesized_content(tokens) else {
                 return Err("error: unmatchd '(' found.".into());
@@ -158,10 +169,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Pa
             env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut inner)?;
             let _ = env.vr_map.pop();
-            Ok(Parsed::Value(result))
+            Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::Symbol(n)) => Ok(Parsed::Value(Value::from(&n))),
+        Some(Token::Symbol(n)) => Ok(Value::from(&n)),
     }
 }
 
@@ -197,17 +208,6 @@ fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     }
 }
 
-fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
-    parseds
-        .iter()
-        .rposition(|n| matches!(n, Parsed::Comma))
-        .map(|i| {
-            let result = parseds.split_off(i + 1);
-            parseds.pop();
-            result
-        })
-}
-
 pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
     let f = env
         .fn_map
@@ -228,7 +228,7 @@ pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value])
     }
 }
 
-fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
+fn applicate(env: &mut Environment, mut parseds: Vec<Value>) -> RResult<Value> {
     loop {
         let result = applicate_inner(env, &mut parseds)?;
         if parseds.is_empty() {
@@ -237,15 +237,9 @@ fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> 
     }
 }
 
-fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Value> {
+fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Value>) -> RResult<Value> {
     // get subject
-    let s = if let Some(n) = extract_until_comma(parseds) {
-        let result = applicate(env, n)?;
-        expand_label(env, result)?
-    } else if let Some(n) = parseds.pop() {
-        let Parsed::Value(n) = n else {
-            panic!("unexpected subject '{n:?}'.");
-        };
+    let s = if let Some(n) = parseds.pop() {
         expand_label(env, n)?
     } else {
         Value::Nil
@@ -255,7 +249,7 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let Some(v) = parseds.pop() else {
         return Ok(s);
     };
-    let Parsed::Value(Value::Label(v_name)) = &v else {
+    let Value::Label(v_name) = &v else {
         parseds.push(v);
         return Ok(s);
     };
@@ -352,28 +346,9 @@ mod test {
     }
 
     #[test]
-    fn test_extract_until_comma() {
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Comma,
-            Parsed::Value(Value::I32(2)),
-            Parsed::Comma,
-        ];
-        parseds.reverse();
-        let mut expect = vec![Parsed::Value(Value::I32(1))];
-        expect.reverse();
-        let result = extract_until_comma(&mut parseds).unwrap();
-        assert_eq!(result, expect);
-    }
-
-    #[test]
     fn test_no_dot_return_last_result() {
         let mut env = Environment::default();
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Value(Value::I32(2)),
-            Parsed::Value(Value::I32(3)),
-        ];
+        let mut parseds = vec![Value::I32(1), Value::I32(2), Value::I32(3)];
         parseds.reverse();
         assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(3));
     }
@@ -381,10 +356,7 @@ mod test {
     #[test]
     fn test_few_arguments() {
         let mut env = Environment::default();
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Value(Value::Label("+".to_string())),
-        ];
+        let mut parseds = vec![Value::I32(1), Value::Label("+".to_string())];
         parseds.reverse();
         applicate(&mut env, parseds).unwrap_err();
     }
