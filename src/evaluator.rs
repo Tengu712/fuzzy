@@ -1,4 +1,7 @@
-mod function;
+mod numeric;
+mod print;
+mod symbol;
+mod variable;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
@@ -67,6 +70,11 @@ impl Value {
     }
 }
 
+const ALL_TYPES: &[&str] = &[
+    "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
+    "string", "symbol",
+];
+
 pub struct Variable {
     pub value: Value,
     pub mutable: bool,
@@ -91,8 +99,17 @@ pub struct Environment {
 
 impl Default for Environment {
     fn default() -> Self {
+        let mut fn_map = HashMap::new();
+        for n in ALL_TYPES {
+            fn_map.insert(n.to_string(), HashMap::new());
+            print::insert_print(&mut fn_map, n);
+            variable::insert_variable_definition(&mut fn_map, n);
+        }
+        numeric::insert_numeric_functions(&mut fn_map);
+        symbol::insert_symbol_value(&mut fn_map);
+
         Self {
-            fn_map: function::setup(),
+            fn_map,
             vr_map: Vec::new(),
         }
     }
@@ -216,7 +233,7 @@ fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     }
 }
 
-pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
     let f = env
         .fn_map
         .get(t)
