@@ -2,10 +2,10 @@
 source: src/lexer.rs
 expression: tokens
 ---
-- Symbol: "1"
-- Symbol: +
-- Symbol: "2"
+- I32: 1
+- Label: +
+- I32: 2
 - Dot
-- Symbol: "3"
-- Symbol: "*"
-- Symbol: "4"
+- I32: 3
+- Label: "*"
+- I32: 4

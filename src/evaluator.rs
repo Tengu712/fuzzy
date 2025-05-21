@@ -1,5 +1,7 @@
-mod function;
-mod number;
+mod numeric;
+mod print;
+mod symbol;
+mod variable;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
@@ -25,15 +27,24 @@ pub enum Value {
 }
 
 impl Value {
-    fn from(s: &str) -> Self {
-        if let Some(n) = number::parse(s) {
-            n
-        } else if s.starts_with("\"") && s.ends_with("\"") {
-            Self::String(s[1..s.len() - 1].to_string())
-        } else if s.starts_with("'") {
-            Self::Symbol(s[1..s.len()].to_string())
-        } else {
-            Self::Label(s.to_string())
+    fn from(token: Token) -> Self {
+        match token {
+            Token::I8(n) => Self::I8(n),
+            Token::U8(n) => Self::U8(n),
+            Token::I16(n) => Self::I16(n),
+            Token::U16(n) => Self::U16(n),
+            Token::I32(n) => Self::I32(n),
+            Token::U32(n) => Self::U32(n),
+            Token::I64(n) => Self::I64(n),
+            Token::U64(n) => Self::U64(n),
+            Token::I128(n) => Self::I128(n),
+            Token::U128(n) => Self::U128(n),
+            Token::F32(n) => Self::F32(n),
+            Token::F64(n) => Self::F64(n),
+            Token::String(n) => Self::String(n),
+            Token::Symbol(n) => Self::Symbol(n),
+            Token::Label(n) => Self::Label(n),
+            _ => panic!("tried to create value from non-atom token."),
         }
     }
 
@@ -59,6 +70,11 @@ impl Value {
     }
 }
 
+const ALL_TYPES: &[&str] = &[
+    "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
+    "string", "symbol",
+];
+
 pub struct Variable {
     pub value: Value,
     pub mutable: bool,
@@ -83,8 +99,17 @@ pub struct Environment {
 
 impl Default for Environment {
     fn default() -> Self {
+        let mut fn_map = HashMap::new();
+        for n in ALL_TYPES {
+            fn_map.insert(n.to_string(), HashMap::new());
+            print::insert_print(&mut fn_map, n);
+            variable::insert_variable_definition(&mut fn_map, n);
+        }
+        numeric::insert_numeric_functions(&mut fn_map);
+        symbol::insert_symbol_value(&mut fn_map);
+
         Self {
-            fn_map: function::setup(),
+            fn_map,
             vr_map: Vec::new(),
         }
     }
@@ -103,12 +128,6 @@ impl Environment {
             Err(format!("error: undefined variable '{name}' found.").into())
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum Parsed {
-    Comma,
-    Value(Value),
 }
 
 /// A function to evaluate a block.
@@ -138,19 +157,36 @@ pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Val
 }
 
 fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut parseds = Vec::new();
-    while !matches!(tokens.last(), Some(Token::Dot) | None) {
-        parseds.push(eval_expression(env, tokens)?);
+    let mut temp = None;
+    loop {
+        // handover temp
+        let mut values = Vec::new();
+        if let Some(n) = temp {
+            values.push(n);
+        }
+
+        // evaluate until separator
+        while !matches!(tokens.last(), Some(Token::Dot) | Some(Token::Comma) | None) {
+            values.push(eval_expression(env, tokens)?);
+        }
+        values.reverse();
+        let result = applicate(env, values)?;
+
+        // continue?
+        if matches!(tokens.last(), Some(Token::Comma)) {
+            tokens.pop().unwrap();
+            temp = Some(result);
+        } else {
+            return Ok(result);
+        }
     }
-    parseds.reverse();
-    applicate(env, parseds)
 }
 
-fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Parsed> {
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
     match tokens.pop() {
         None => panic!("no token passed to eval_expression."),
         Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
-        Some(Token::Comma) => Ok(Parsed::Comma),
+        Some(Token::Comma) => panic!("Token::Comma passed to eval_expression."),
         Some(Token::LParen) => {
             let Some(mut inner) = extract_parenthesized_content(tokens) else {
                 return Err("error: unmatchd '(' found.".into());
@@ -158,10 +194,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Pa
             env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut inner)?;
             let _ = env.vr_map.pop();
-            Ok(Parsed::Value(result))
+            Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::Symbol(n)) => Ok(Parsed::Value(Value::from(&n))),
+        Some(n) => Ok(Value::from(n)),
     }
 }
 
@@ -197,18 +233,7 @@ fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     }
 }
 
-fn extract_until_comma(parseds: &mut Vec<Parsed>) -> Option<Vec<Parsed>> {
-    parseds
-        .iter()
-        .rposition(|n| matches!(n, Parsed::Comma))
-        .map(|i| {
-            let result = parseds.split_off(i + 1);
-            parseds.pop();
-            result
-        })
-}
-
-pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
     let f = env
         .fn_map
         .get(t)
@@ -228,7 +253,7 @@ pub fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value])
     }
 }
 
-fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> {
+fn applicate(env: &mut Environment, mut parseds: Vec<Value>) -> RResult<Value> {
     loop {
         let result = applicate_inner(env, &mut parseds)?;
         if parseds.is_empty() {
@@ -237,15 +262,9 @@ fn applicate(env: &mut Environment, mut parseds: Vec<Parsed>) -> RResult<Value> 
     }
 }
 
-fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<Value> {
+fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Value>) -> RResult<Value> {
     // get subject
-    let s = if let Some(n) = extract_until_comma(parseds) {
-        let result = applicate(env, n)?;
-        expand_label(env, result)?
-    } else if let Some(n) = parseds.pop() {
-        let Parsed::Value(n) = n else {
-            panic!("unexpected subject '{n:?}'.");
-        };
+    let s = if let Some(n) = parseds.pop() {
         expand_label(env, n)?
     } else {
         Value::Nil
@@ -255,7 +274,7 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Parsed>) -> RResult<
     let Some(v) = parseds.pop() else {
         return Ok(s);
     };
-    let Parsed::Value(Value::Label(v_name)) = &v else {
+    let Value::Label(v_name) = &v else {
         parseds.push(v);
         return Ok(s);
     };
@@ -352,28 +371,9 @@ mod test {
     }
 
     #[test]
-    fn test_extract_until_comma() {
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Comma,
-            Parsed::Value(Value::I32(2)),
-            Parsed::Comma,
-        ];
-        parseds.reverse();
-        let mut expect = vec![Parsed::Value(Value::I32(1))];
-        expect.reverse();
-        let result = extract_until_comma(&mut parseds).unwrap();
-        assert_eq!(result, expect);
-    }
-
-    #[test]
     fn test_no_dot_return_last_result() {
         let mut env = Environment::default();
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Value(Value::I32(2)),
-            Parsed::Value(Value::I32(3)),
-        ];
+        let mut parseds = vec![Value::I32(1), Value::I32(2), Value::I32(3)];
         parseds.reverse();
         assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(3));
     }
@@ -381,10 +381,7 @@ mod test {
     #[test]
     fn test_few_arguments() {
         let mut env = Environment::default();
-        let mut parseds = vec![
-            Parsed::Value(Value::I32(1)),
-            Parsed::Value(Value::Label("+".to_string())),
-        ];
+        let mut parseds = vec![Value::I32(1), Value::Label("+".to_string())];
         parseds.reverse();
         applicate(&mut env, parseds).unwrap_err();
     }

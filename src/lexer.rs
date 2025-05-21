@@ -1,22 +1,48 @@
 use crate::*;
 use regex::Regex;
 
-#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub enum Token {
+    // signs
     Dot,
     Comma,
     LParen,
     RParen,
+    // atoms
+    I8(i8),
+    U8(u8),
+    I16(i16),
+    U16(u16),
+    I32(i32),
+    U32(u32),
+    I64(i64),
+    U64(u64),
+    I128(i128),
+    U128(u128),
+    F32(f32),
+    F64(f64),
+    String(String),
     Symbol(String),
+    Label(String),
 }
 impl Token {
     fn from(s: &str) -> Self {
-        match s {
-            "." => Self::Dot,
-            "," => Self::Comma,
-            "(" => Self::LParen,
-            ")" => Self::RParen,
-            _ => Self::Symbol(s.to_string()),
+        if s == "." {
+            Self::Dot
+        } else if s == "," {
+            Self::Comma
+        } else if s == "(" {
+            Self::LParen
+        } else if s == ")" {
+            Self::RParen
+        } else if let Some(n) = parse_number(s) {
+            n
+        } else if s.starts_with("\"") && s.ends_with("\"") {
+            Self::String(s[1..s.len() - 1].to_string())
+        } else if s.starts_with("'") {
+            Self::Symbol(s[1..s.len()].to_string())
+        } else {
+            Self::Label(s.to_string())
         }
     }
 }
@@ -63,13 +89,38 @@ fn is_sign_char(c: char) -> bool {
     matches!(c, '.' | ',' | '(' | ')')
 }
 
+fn parse_number(s: &str) -> Option<Token> {
+    let caps = Regex::new(r"(.*?)(i8|u8|i16|u16|i32|u32|i64|u64|i128|u128|f32|f64)?$")
+        .ok()?
+        .captures(s)?;
+    let f = caps.get(1)?.as_str();
+    let l = caps.get(2).map(|n| n.as_str());
+    match (f, l) {
+        (n, None) => n.parse::<i32>().ok().map(Token::I32),
+        (n, Some("i8")) => n.parse::<i8>().ok().map(Token::I8),
+        (n, Some("u8")) => n.parse::<u8>().ok().map(Token::U8),
+        (n, Some("i16")) => n.parse::<i16>().ok().map(Token::I16),
+        (n, Some("u16")) => n.parse::<u16>().ok().map(Token::U16),
+        (n, Some("i32")) => n.parse::<i32>().ok().map(Token::I32),
+        (n, Some("u32")) => n.parse::<u32>().ok().map(Token::U32),
+        (n, Some("i64")) => n.parse::<i64>().ok().map(Token::I64),
+        (n, Some("u64")) => n.parse::<u64>().ok().map(Token::U64),
+        (n, Some("i128")) => n.parse::<i128>().ok().map(Token::I128),
+        (n, Some("u128")) => n.parse::<u128>().ok().map(Token::U128),
+        (n, Some("f32")) => n.parse::<f32>().ok().map(Token::F32),
+        (n, Some("f64")) => n.parse::<f64>().ok().map(Token::F64),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use fake::{Fake, Faker};
 
     #[test]
     fn test_oneline() {
-        let tokens = lex("	  12 	 ->   twelve.  ").unwrap();
+        let tokens = lex("	  12 	 ->   'twelve.  ").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
@@ -101,5 +152,58 @@ mod test {
     fn test_comment() {
         let tokens = lex("-- head\n1 + 2. -- middle\n3 * 4 --tail").unwrap();
         insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_parse_u32_not_number() {
+        assert_eq!(parse_number("u32"), None);
+    }
+
+    #[test]
+    fn test_parse_foof64_not_number() {
+        assert_eq!(parse_number("foof64"), None);
+    }
+
+    #[test]
+    fn test_parse_2147483648_not_number() {
+        assert_eq!(parse_number("2147483648"), None);
+    }
+
+    #[test]
+    fn test_parse_2147483648u16_not_number() {
+        assert_eq!(parse_number("2147483648u16"), None);
+    }
+
+    #[test]
+    fn test_parse_2147483648u32_to_u32() {
+        assert_eq!(parse_number("2147483648u32"), Some(Token::U32(2147483648)));
+    }
+
+    #[test]
+    fn test_parse_1f32_to_f32() {
+        assert_eq!(parse_number("1f32"), Some(Token::F32(1.0)));
+    }
+
+    #[test]
+    fn test_parse_1_e_minus_2_f32_to_f32() {
+        assert_eq!(parse_number("1e-2f32"), Some(Token::F32(0.01)));
+    }
+
+    #[test]
+    fn test_parse_no_suffix_i32() {
+        let n = Faker.fake::<i32>();
+        assert_eq!(parse_number(&format!("{n}")), Some(Token::I32(n)));
+    }
+
+    #[test]
+    fn test_parse_u64() {
+        let n = Faker.fake::<u64>();
+        assert_eq!(parse_number(&format!("{n}u64")), Some(Token::U64(n)));
+    }
+
+    #[test]
+    fn test_parse_f32() {
+        let n = Faker.fake::<f32>();
+        assert_eq!(parse_number(&format!("{n}f32")), Some(Token::F32(n)));
     }
 }

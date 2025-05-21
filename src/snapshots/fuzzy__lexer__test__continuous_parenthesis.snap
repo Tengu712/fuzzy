@@ -3,12 +3,12 @@ source: src/lexer.rs
 expression: tokens
 ---
 - LParen
-- Symbol: "1"
-- Symbol: +
+- I32: 1
+- Label: +
 - LParen
-- Symbol: "2"
-- Symbol: "*"
-- Symbol: "3"
+- I32: 2
+- Label: "*"
+- I32: 3
 - RParen
 - RParen
 - Dot
