@@ -1,5 +1,4 @@
 mod function;
-mod number;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
@@ -25,15 +24,24 @@ pub enum Value {
 }
 
 impl Value {
-    fn from(s: &str) -> Self {
-        if let Some(n) = number::parse(s) {
-            n
-        } else if s.starts_with("\"") && s.ends_with("\"") {
-            Self::String(s[1..s.len() - 1].to_string())
-        } else if s.starts_with("'") {
-            Self::Symbol(s[1..s.len()].to_string())
-        } else {
-            Self::Label(s.to_string())
+    fn from(token: Token) -> Self {
+        match token {
+            Token::I8(n) => Self::I8(n),
+            Token::U8(n) => Self::U8(n),
+            Token::I16(n) => Self::I16(n),
+            Token::U16(n) => Self::U16(n),
+            Token::I32(n) => Self::I32(n),
+            Token::U32(n) => Self::U32(n),
+            Token::I64(n) => Self::I64(n),
+            Token::U64(n) => Self::U64(n),
+            Token::I128(n) => Self::I128(n),
+            Token::U128(n) => Self::U128(n),
+            Token::F32(n) => Self::F32(n),
+            Token::F64(n) => Self::F64(n),
+            Token::String(n) => Self::String(n),
+            Token::Symbol(n) => Self::Symbol(n),
+            Token::Label(n) => Self::Label(n),
+            _ => panic!("tried to create value from non-atom token."),
         }
     }
 
@@ -172,7 +180,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::Symbol(n)) => Ok(Value::from(&n)),
+        Some(n) => Ok(Value::from(n)),
     }
 }
 

@@ -2,5 +2,5 @@
 source: src/lexer.rs
 expression: tokens
 ---
-- Symbol: 1.2f32
+- F32: 1.2
 - Dot
