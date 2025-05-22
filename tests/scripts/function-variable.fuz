@@ -1,0 +1,4 @@
+-- Defining and calling function variable test. --
+
+-- no argument
+{ 1 + 2 } -> 'three.

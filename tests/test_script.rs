@@ -43,6 +43,11 @@ fn test_symbol_value() {
 }
 
 #[test]
+fn test_function_variable() {
+    run("tests/scripts/function-variable.fuz", "");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
