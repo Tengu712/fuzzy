@@ -1,3 +1,4 @@
+mod function;
 mod numeric;
 mod print;
 mod symbol;
@@ -74,7 +75,7 @@ impl Value {
 
 const ALL_TYPES: &[&str] = &[
     "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string", "symbol",
+    "string", "function", "symbol",
 ];
 
 pub struct Variable {
@@ -110,6 +111,7 @@ impl Default for Environment {
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
         }
+        function::insert_function_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
 
