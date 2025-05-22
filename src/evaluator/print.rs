@@ -39,6 +39,7 @@ macro_rules! define_print {
                 Value::F64(n) => $fn!("{n}"),
                 Value::String(n) => $fn!("{n}"),
                 Value::Symbol(n) => $fn!("{n}"),
+                Value::Function(_) => $fn!("{{}}"),
                 Value::Label(_) => panic!("tried to print label."),
             }
             Ok(s)

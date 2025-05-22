@@ -72,6 +72,15 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
+            Self::Function(n) => {
+                let mut s = "{} @ ".to_string();
+                for t in n.types.iter() {
+                    s.push_str(&t);
+                    s.push(' ');
+                }
+                s.push_str(" (function)");
+                s
+            }
             Self::Label(_) => panic!("tried to format label."),
         }
     }
