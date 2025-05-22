@@ -1,4 +1,4 @@
-mod function;
+mod lazy;
 mod numeric;
 mod print;
 mod symbol;
@@ -6,6 +6,24 @@ mod variable;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LazyBlock {
+    pub tokens: Vec<Token>,
+    pub args: Vec<(String, String)>,
+}
+
+impl LazyBlock {
+    fn get_typeid(&self) -> String {
+        let n = self
+            .args
+            .iter()
+            .map(|n| n.1.as_str())
+            .collect::<Vec<&str>>()
+            .join("|");
+        format!("{{{n}}}")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -24,7 +42,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
-    Function(Function),
+    Lazy(LazyBlock),
     Label(String),
 }
 
@@ -67,7 +85,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
-            Self::Function(_) => "function".to_string(),
+            Self::Lazy(n) => n.get_typeid(),
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
@@ -75,7 +93,7 @@ impl Value {
 
 const ALL_TYPES: &[&str] = &[
     "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string", "function", "symbol",
+    "string", "symbol", "{}",
 ];
 
 pub struct Variable {
@@ -86,7 +104,6 @@ pub struct Variable {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCode {
     Builtin(fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>),
-    LazyBlock(Vec<Token>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,7 +128,7 @@ impl Default for Environment {
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
         }
-        function::insert_function_functions(&mut fn_map);
+        lazy::insert_lazy_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
 
@@ -208,9 +225,9 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
                 return Err("error: unmatched '{' found.".into());
             };
-            Ok(Value::Function(Function {
-                types: Vec::new(),
-                code: FunctionCode::LazyBlock(n),
+            Ok(Value::Lazy(LazyBlock {
+                tokens: n,
+                args: Vec::new(),
             }))
         }
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
@@ -320,7 +337,6 @@ fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Value>) -> RResult<V
     // applicate
     let result = match env.fn_map[&t][v_name].code {
         FunctionCode::Builtin(f) => (f)(env, s, args)?,
-        FunctionCode::LazyBlock(_) => panic!("unimplemented"),
     };
     Ok(result)
 }

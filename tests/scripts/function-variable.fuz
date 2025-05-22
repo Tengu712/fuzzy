@@ -1,4 +1,13 @@
 -- Defining and calling function variable test. --
 
--- no argument
+-- just a lazy block
 { 1 + 2 } -> 'three.
+three @, !!
+
+-- one argument function
+-- { 'x 'i32 } : { x + 1 }, -> 'incr.
+-- incr @ 4, !!
+
+-- two arguments function
+-- { 'x 'i32 'y 'i32 } : { x + y }, -> 'add.
+-- add @ 5 7, !!

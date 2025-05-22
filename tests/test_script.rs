@@ -44,7 +44,7 @@ fn test_symbol_value() {
 
 #[test]
 fn test_function_variable() {
-    run("tests/scripts/function-variable.fuz", "");
+    run("tests/scripts/function-variable.fuz", "3\n");
 }
 
 #[test]

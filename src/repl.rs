@@ -72,13 +72,18 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
-            Self::Function(n) => {
-                let mut s = "{} @ ".to_string();
-                for t in n.types.iter() {
-                    s.push_str(&t);
-                    s.push(' ');
+            Self::Lazy(n) => {
+                let mut s = "{}".to_string();
+                if n.args.is_empty() {
+                    return s;
                 }
-                s.push_str(" (function)");
+                s.push_str(" @ ");
+                for (i, (a, t)) in n.args.iter().enumerate() {
+                    s.push_str(&format!("{a} ({t})"));
+                    if i + 1 != n.args.len() {
+                        s.push_str(" * ");
+                    }
+                }
                 s
             }
             Self::Label(_) => panic!("tried to format label."),
