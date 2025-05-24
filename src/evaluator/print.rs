@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
-    if ty == "lazy" {
+    if ty == "{}" {
         return;
     }
     let map = maps
