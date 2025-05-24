@@ -1,3 +1,4 @@
+mod lazy;
 mod numeric;
 mod print;
 mod symbol;
@@ -23,6 +24,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
+    Lazy(Vec<Token>),
     Label(String),
 }
 
@@ -65,6 +67,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
+            Self::Lazy(_) => "{}".to_string(),
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
@@ -72,7 +75,7 @@ impl Value {
 
 const ALL_TYPES: &[&str] = &[
     "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string", "symbol",
+    "string", "symbol", "{}",
 ];
 
 pub struct Variable {
@@ -80,10 +83,12 @@ pub struct Variable {
     pub mutable: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCode {
     Builtin(fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub types: Vec<String>,
     pub code: FunctionCode,
@@ -105,6 +110,7 @@ impl Default for Environment {
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
         }
+        lazy::insert_lazy_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
 
@@ -188,15 +194,22 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
         Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
         Some(Token::Comma) => panic!("Token::Comma passed to eval_expression."),
         Some(Token::LParen) => {
-            let Some(mut inner) = extract_parenthesized_content(tokens) else {
-                return Err("error: unmatchd '(' found.".into());
+            let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
+                return Err("error: unmatched '(' found.".into());
             };
             env.vr_map.push(HashMap::new());
-            let result = eval_block(env, &mut inner)?;
+            let result = eval_block(env, &mut n)?;
             let _ = env.vr_map.pop();
             Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
+        Some(Token::LBrace) => {
+            let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
+                return Err("error: unmatched '{' found.".into());
+            };
+            Ok(Value::Lazy(n))
+        }
+        Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
         Some(n) => Ok(Value::from(n)),
     }
 }
@@ -209,18 +222,17 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
     }
 }
 
-fn extract_parenthesized_content(tokens: &mut Vec<Token>) -> Option<Vec<Token>> {
+fn extract_brackets_content(tokens: &mut Vec<Token>, l: Token, r: Token) -> Option<Vec<Token>> {
     let mut depth = 0;
     for i in (0..tokens.len()).rev() {
-        match tokens[i] {
-            Token::RParen if depth == 0 => {
-                let mut result = tokens.split_off(i);
-                result.remove(0);
-                return Some(result);
-            }
-            Token::RParen => depth -= 1,
-            Token::LParen => depth += 1,
-            _ => (),
+        if tokens[i] == r && depth == 0 {
+            let mut result = tokens.split_off(i);
+            result.remove(0);
+            return Some(result);
+        } else if tokens[i] == r {
+            depth -= 1;
+        } else if tokens[i] == l {
+            depth += 1;
         }
     }
     None
@@ -323,7 +335,7 @@ mod test {
         tokens.reverse();
         let result_expect = vec![Token::Symbol("1".to_string())];
         let tokens_expect = vec![Token::Symbol("2".to_string())];
-        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        let result = extract_brackets_content(&mut tokens, Token::LParen, Token::RParen).unwrap();
         assert_eq!(tokens, tokens_expect);
         assert_eq!(result, result_expect);
     }
@@ -347,7 +359,7 @@ mod test {
             Token::Symbol("1".to_string()),
         ];
         let tokens_expect = vec![Token::Symbol("3".to_string())];
-        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        let result = extract_brackets_content(&mut tokens, Token::LParen, Token::RParen).unwrap();
         assert_eq!(tokens, tokens_expect);
         assert_eq!(result, result_expect);
     }
@@ -365,7 +377,7 @@ mod test {
         tokens.reverse();
         let result_expect = vec![Token::Symbol("1".to_string())];
         let tokens_expect = vec![Token::RParen, Token::Symbol("3".to_string()), Token::LParen];
-        let result = extract_parenthesized_content(&mut tokens).unwrap();
+        let result = extract_brackets_content(&mut tokens, Token::LParen, Token::RParen).unwrap();
         assert_eq!(tokens, tokens_expect);
         assert_eq!(result, result_expect);
     }

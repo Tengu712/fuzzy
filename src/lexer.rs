@@ -8,6 +8,8 @@ pub enum Token {
     Comma,
     LParen,
     RParen,
+    LBrace,
+    RBrace,
     // atoms
     I8(i8),
     U8(u8),
@@ -35,6 +37,10 @@ impl Token {
             Self::LParen
         } else if s == ")" {
             Self::RParen
+        } else if s == "{" {
+            Self::LBrace
+        } else if s == "}" {
+            Self::RBrace
         } else if let Some(n) = parse_number(s) {
             n
         } else if s.starts_with("\"") && s.ends_with("\"") {
@@ -86,7 +92,7 @@ fn is_sign_str(s: &str) -> bool {
 }
 
 fn is_sign_char(c: char) -> bool {
-    matches!(c, '.' | ',' | '(' | ')')
+    matches!(c, '.' | ',' | '(' | ')' | '{' | '}')
 }
 
 fn parse_number(s: &str) -> Option<Token> {
@@ -145,6 +151,12 @@ mod test {
     #[test]
     fn test_comma() {
         let tokens = lex("1 + 2, * 3").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_braces() {
+        let tokens = lex("{ 1 + 2 } -> f.").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 

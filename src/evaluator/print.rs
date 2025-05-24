@@ -1,6 +1,9 @@
 use super::*;
 
 pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
+    if ty == "{}" {
+        return;
+    }
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
@@ -39,6 +42,7 @@ macro_rules! define_print {
                 Value::F64(n) => $fn!("{n}"),
                 Value::String(n) => $fn!("{n}"),
                 Value::Symbol(n) => $fn!("{n}"),
+                Value::Lazy(_) => panic!("tried to print lazy block."),
                 Value::Label(_) => panic!("tried to print label."),
             }
             Ok(s)

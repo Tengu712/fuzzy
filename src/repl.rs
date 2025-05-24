@@ -72,6 +72,7 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
+            Self::Lazy(_) => "{}".to_string(),
             Self::Label(_) => panic!("tried to format label."),
         }
     }

@@ -43,6 +43,11 @@ fn test_symbol_value() {
 }
 
 #[test]
+fn test_lazy_block() {
+    run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
