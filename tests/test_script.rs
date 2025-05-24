@@ -43,8 +43,8 @@ fn test_symbol_value() {
 }
 
 #[test]
-fn test_function_variable() {
-    run("tests/scripts/function-variable.fuz", "3\n");
+fn test_lazy_block() {
+    run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n");
 }
 
 #[test]

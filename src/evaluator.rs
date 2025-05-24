@@ -8,24 +8,6 @@ use crate::{lexer::*, *};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LazyBlock {
-    pub tokens: Vec<Token>,
-    pub args: Vec<(String, String)>,
-}
-
-impl LazyBlock {
-    fn get_typeid(&self) -> String {
-        let n = self
-            .args
-            .iter()
-            .map(|n| n.1.as_str())
-            .collect::<Vec<&str>>()
-            .join("|");
-        format!("{{{n}}}")
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
     I8(i8),
@@ -42,7 +24,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
-    Lazy(LazyBlock),
+    Lazy(Vec<Token>),
     Label(String),
 }
 
@@ -85,7 +67,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
-            Self::Lazy(n) => n.get_typeid(),
+            Self::Lazy(_) => "{}".to_string(),
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
@@ -225,10 +207,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
                 return Err("error: unmatched '{' found.".into());
             };
-            Ok(Value::Lazy(LazyBlock {
-                tokens: n,
-                args: Vec::new(),
-            }))
+            Ok(Value::Lazy(n))
         }
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
         Some(n) => Ok(Value::from(n)),
