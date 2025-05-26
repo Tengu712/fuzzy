@@ -55,7 +55,7 @@ impl Value {
                 let mut s = "[".to_string();
                 for (i, m) in n.iter().enumerate() {
                     s.push_str(&m.format());
-                    if i < n.len() {
+                    if i < n.len() - 1 {
                         s.push(' ');
                     }
                 }

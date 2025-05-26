@@ -38,7 +38,9 @@ fn run_inner(env: &mut Environment) -> RResult<bool> {
     // eval
     let mut tokens = lexer::lex(input)?;
     tokens.reverse();
-    let value = evaluator::eval_block(env, &mut tokens)?;
+    let value = evaluator::eval_block(env, &mut tokens)?
+        .pop()
+        .expect("evaluating block result is empty.");
 
     // print
     println!("{}", value.format_for_repl(env));
@@ -76,7 +78,7 @@ impl Value {
                 let mut s = "[".to_string();
                 for (i, m) in n.iter().enumerate() {
                     s.push_str(&m.format_for_repl(env));
-                    if i < n.len() {
+                    if i < n.len() - 1 {
                         s.push(' ');
                     }
                 }
