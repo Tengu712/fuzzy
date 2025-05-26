@@ -210,6 +210,10 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             Ok(Value::Lazy(n))
         }
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
+        Some(Token::LBracket) => {
+            panic!("unimplemented");
+        },
+        Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
         Some(n) => Ok(Value::from(n)),
     }
 }

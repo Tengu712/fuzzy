@@ -48,6 +48,11 @@ fn test_lazy_block() {
 }
 
 #[test]
+fn test_array() {
+    run("tests/scripts/array.fuz", "\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
