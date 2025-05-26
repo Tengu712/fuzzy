@@ -1,1 +1,7 @@
+-- Array test. --
+
+-- attom array
 [ 1 2.3f32 "hello" ] !!
+
+-- sentence array
+[ 1 2 + 3. 4 + 5 (1 2) {3. 4 5 !!} @] !!
