@@ -24,6 +24,7 @@ pub enum Value {
     F64(f64),
     String(String),
     Symbol(String),
+    Array(Vec<Value>),
     Lazy(Vec<Token>),
     Label(String),
 }
@@ -67,6 +68,7 @@ impl Value {
             Self::F64(_) => "f64".to_string(),
             Self::String(_) => "string".to_string(),
             Self::Symbol(_) => "symbol".to_string(),
+            Self::Array(_) => "[]".to_string(),
             Self::Lazy(_) => "{}".to_string(),
             Self::Label(_) => panic!("tried to get type of label."),
         }
@@ -75,7 +77,7 @@ impl Value {
 
 const ALL_TYPES: &[&str] = &[
     "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string", "symbol", "{}",
+    "string", "symbol", "[]", "{}",
 ];
 
 pub struct Variable {
@@ -100,6 +102,7 @@ pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 pub struct Environment {
     pub fn_map: FunctionMap,
     pub vr_map: VariableMapStack,
+    evaluated: Option<Value>,
 }
 
 impl Default for Environment {
@@ -117,6 +120,7 @@ impl Default for Environment {
         Self {
             fn_map,
             vr_map: Vec::new(),
+            evaluated: None,
         }
     }
 }
@@ -162,84 +166,86 @@ pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Val
     }
 }
 
-fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut temp = None;
-    loop {
-        // handover temp
-        let mut values = Vec::new();
-        if let Some(n) = temp {
-            values.push(n);
-        }
-
-        // evaluate until separator
-        while !matches!(tokens.last(), Some(Token::Dot) | Some(Token::Comma) | None) {
-            values.push(eval_expression(env, tokens)?);
-        }
-        values.reverse();
-        let result = applicate(env, values)?;
-
-        // continue?
-        if matches!(tokens.last(), Some(Token::Comma)) {
-            tokens.pop().unwrap();
-            temp = Some(result);
-        } else {
-            return Ok(result);
-        }
-    }
-}
-
-fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    match tokens.pop() {
-        None => panic!("no token passed to eval_expression."),
-        Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
-        Some(Token::Comma) => panic!("Token::Comma passed to eval_expression."),
-        Some(Token::LParen) => {
-            let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
-                return Err("error: unmatched '(' found.".into());
-            };
-            env.vr_map.push(HashMap::new());
-            let result = eval_block(env, &mut n)?;
-            let _ = env.vr_map.pop();
-            Ok(result)
-        }
-        Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
-        Some(Token::LBrace) => {
-            let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
-                return Err("error: unmatched '{' found.".into());
-            };
-            Ok(Value::Lazy(n))
-        }
-        Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
-        Some(Token::LBracket) => {
-            panic!("unimplemented");
-        },
-        Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
-        Some(n) => Ok(Value::from(n)),
-    }
-}
-
 fn eat_dot(tokens: &mut Vec<Token>) -> bool {
-    match tokens.pop() {
-        None => false,
-        Some(Token::Dot) => true,
-        n => panic!("'{n:?}' found immediately after sentence."),
+    matches!(tokens.last(), Some(Token::Dot)) && tokens.pop().is_some()
+}
+
+/// A function to evaluate a sentence.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
+fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+    let mut s = env.evaluated.take();
+    loop {
+        let n = eval_sentence_inner(env, tokens, s)?;
+        if matches!(tokens.last(), Some(Token::Comma)) {
+            tokens.pop();
+            s = Some(n);
+        } else {
+            return Ok(n);
+        }
     }
 }
 
-fn extract_brackets_content(tokens: &mut Vec<Token>, l: Token, r: Token) -> Option<Vec<Token>> {
-    let mut depth = 0;
-    for i in (0..tokens.len()).rev() {
-        if tokens[i] == r && depth == 0 {
-            let mut result = tokens.split_off(i);
-            result.remove(0);
-            return Some(result);
-        } else if tokens[i] == r {
-            depth -= 1;
-        } else if tokens[i] == l {
-            depth += 1;
-        }
+fn eval_sentence_inner(
+    env: &mut Environment,
+    tokens: &mut Vec<Token>,
+    s: Option<Value>,
+) -> RResult<Value> {
+    // end?
+    if is_end_sentence(tokens) {
+        return Ok(s.unwrap_or(Value::Nil));
     }
-    None
+
+    // get subject
+    let s = s.map_or_else(|| eval_expression(env, tokens), Ok)?;
+    let s = expand_label(env, s)?;
+
+    // end?
+    if is_end_sentence(tokens) {
+        return Ok(s);
+    }
+
+    // get verb
+    let v = eval_expression(env, tokens)?;
+    let Value::Label(vn) = &v else {
+        env.evaluated = Some(v);
+        return Ok(s);
+    };
+
+    // get verb function
+    let t = s.get_typeid();
+    if !env
+        .fn_map
+        .get(&t)
+        .map(|n| n.contains_key(vn))
+        .unwrap_or(false)
+    {
+        env.evaluated = Some(v);
+        return Ok(s);
+    };
+
+    // collect arguments
+    let mut args = Vec::new();
+    while !check_argument_types(env, &t, vn, &args)? {
+        if is_end_sentence(tokens) {
+            return Err(format!("error: too few arguments passed to '{t}' on '{vn}'.").into());
+        }
+        let arg = eval_sentence_inner(env, tokens, None)?;
+        let arg = expand_label(env, arg)?;
+        args.push(arg);
+    }
+    args.reverse();
+
+    // applicate
+    let result = match env.fn_map[&t][vn].code {
+        FunctionCode::Builtin(f) => (f)(env, s, args)?,
+    };
+    Ok(result)
+}
+
+fn is_end_sentence(tokens: &[Token]) -> bool {
+    matches!(tokens.last(), None | Some(Token::Dot) | Some(Token::Comma))
 }
 
 fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
@@ -269,59 +275,57 @@ fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> 
     }
 }
 
-fn applicate(env: &mut Environment, mut parseds: Vec<Value>) -> RResult<Value> {
-    loop {
-        let result = applicate_inner(env, &mut parseds)?;
-        if parseds.is_empty() {
-            return Ok(result);
+/// A function to evaluate an atom or a block.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+    match tokens.pop() {
+        None => panic!("no token passed to eval_expression."),
+        Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
+        Some(Token::Comma) => panic!("Token::Comma passed to eval_expression."),
+        Some(Token::LParen) => {
+            let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
+                return Err("error: unmatched '(' found.".into());
+            };
+            env.vr_map.push(HashMap::new());
+            let result = eval_block(env, &mut n)?;
+            let _ = env.vr_map.pop();
+            Ok(result)
         }
+        Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
+        Some(Token::LBrace) => {
+            let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
+                return Err("error: unmatched '{' found.".into());
+            };
+            Ok(Value::Lazy(n))
+        }
+        Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
+        Some(Token::LBracket) => {
+            let Some(_) = extract_brackets_content(tokens, Token::LBracket, Token::RBracket) else {
+                return Err("error: unmatched '[' found.".into());
+            };
+            panic!("unimplemented");
+        }
+        Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
+        Some(n) => Ok(Value::from(n)),
     }
 }
 
-fn applicate_inner(env: &mut Environment, parseds: &mut Vec<Value>) -> RResult<Value> {
-    // get subject
-    let s = if let Some(n) = parseds.pop() {
-        expand_label(env, n)?
-    } else {
-        Value::Nil
-    };
-
-    // get verb
-    let Some(v) = parseds.pop() else {
-        return Ok(s);
-    };
-    let Value::Label(v_name) = &v else {
-        parseds.push(v);
-        return Ok(s);
-    };
-
-    // get verb function
-    let t = s.get_typeid();
-    if !env.fn_map.contains_key(&t) || !env.fn_map[&t].contains_key(v_name) {
-        parseds.push(v);
-        return Ok(s);
-    };
-
-    // collect arguments
-    let mut args = Vec::new();
-    loop {
-        if check_argument_types(env, &t, v_name, &args)? {
-            break;
+fn extract_brackets_content(tokens: &mut Vec<Token>, l: Token, r: Token) -> Option<Vec<Token>> {
+    let mut depth = 0;
+    for i in (0..tokens.len()).rev() {
+        if tokens[i] == r && depth == 0 {
+            let mut result = tokens.split_off(i);
+            result.remove(0);
+            return Some(result);
+        } else if tokens[i] == r {
+            depth -= 1;
+        } else if tokens[i] == l {
+            depth += 1;
         }
-        if parseds.is_empty() {
-            return Err(format!("error: too few arguments passed to '{t}' on '{v_name}'.").into());
-        }
-        let arg = applicate_inner(env, parseds)?;
-        let arg = expand_label(env, arg)?;
-        args.push(arg);
     }
-    args.reverse();
-
-    // applicate
-    let result = match env.fn_map[&t][v_name].code {
-        FunctionCode::Builtin(f) => (f)(env, s, args)?,
-    };
-    Ok(result)
+    None
 }
 
 #[cfg(test)]
@@ -384,21 +388,5 @@ mod test {
         let result = extract_brackets_content(&mut tokens, Token::LParen, Token::RParen).unwrap();
         assert_eq!(tokens, tokens_expect);
         assert_eq!(result, result_expect);
-    }
-
-    #[test]
-    fn test_no_dot_return_last_result() {
-        let mut env = Environment::default();
-        let mut parseds = vec![Value::I32(1), Value::I32(2), Value::I32(3)];
-        parseds.reverse();
-        assert_eq!(applicate(&mut env, parseds).unwrap(), Value::I32(3));
-    }
-
-    #[test]
-    fn test_few_arguments() {
-        let mut env = Environment::default();
-        let mut parseds = vec![Value::I32(1), Value::Label("+".to_string())];
-        parseds.reverse();
-        applicate(&mut env, parseds).unwrap_err();
     }
 }

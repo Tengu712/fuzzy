@@ -72,6 +72,17 @@ impl Value {
                     format!("{n} (symbol)")
                 }
             }
+            Self::Array(n) => {
+                let mut s = "[".to_string();
+                for (i, m) in n.iter().enumerate() {
+                    s.push_str(&m.format_for_repl(env));
+                    if i < n.len() {
+                        s.push(' ');
+                    }
+                }
+                s.push(']');
+                s
+            }
             Self::Lazy(_) => "{}".to_string(),
             Self::Label(_) => panic!("tried to format label."),
         }
