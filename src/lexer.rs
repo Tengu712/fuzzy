@@ -61,7 +61,7 @@ impl Token {
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
     let mut tokens = Vec::new();
-    let regex = Regex::new(r#""[^"]*"|[()]|\S+|\.|,"#)?;
+    let regex = Regex::new(r#""[^"]*"|[(\{\[)\}\]]|\S+|\.|,"#)?;
     for l in code.lines() {
         let l = l.find("--").map(|n| &l[..n]).unwrap_or(l);
         let i = regex
@@ -169,7 +169,7 @@ mod test {
 
     #[test]
     fn test_brackets() {
-        let tokens = lex("[ 1 + 2 ].").unwrap();
+        let tokens = lex("[1 + 2].").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
