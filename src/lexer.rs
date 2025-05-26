@@ -10,6 +10,8 @@ pub enum Token {
     RParen,
     LBrace,
     RBrace,
+    LBracket,
+    RBracket,
     // atoms
     I8(i8),
     U8(u8),
@@ -41,6 +43,10 @@ impl Token {
             Self::LBrace
         } else if s == "}" {
             Self::RBrace
+        } else if s == "[" {
+            Self::LBracket
+        } else if s == "]" {
+            Self::RBracket
         } else if let Some(n) = parse_number(s) {
             n
         } else if s.starts_with("\"") && s.ends_with("\"") {
@@ -61,6 +67,7 @@ pub fn lex(code: &str) -> RResult<Vec<Token>> {
         let i = regex
             .find_iter(l)
             .flat_map(|n| split_trailing_signs(n.as_str()))
+            .filter(|n| !n.is_empty())
             .map(Token::from);
         tokens.extend(i);
     }
@@ -92,7 +99,7 @@ fn is_sign_str(s: &str) -> bool {
 }
 
 fn is_sign_char(c: char) -> bool {
-    matches!(c, '.' | ',' | '(' | ')' | '{' | '}')
+    matches!(c, '.' | ',' | '(' | ')' | '{' | '}' | '[' | ']')
 }
 
 fn parse_number(s: &str) -> Option<Token> {
@@ -157,6 +164,12 @@ mod test {
     #[test]
     fn test_braces() {
         let tokens = lex("{ 1 + 2 } -> f.").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_brackets() {
+        let tokens = lex("[ 1 + 2 ].").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
