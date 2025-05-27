@@ -15,3 +15,4 @@ arr @@ 1 "bar", -> 'arr.
 arr !!
 arr @< 2 'baz, -> 'arr.
 arr !!
+arr ^, !!
