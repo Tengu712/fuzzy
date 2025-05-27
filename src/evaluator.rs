@@ -1,4 +1,5 @@
 mod array;
+mod boolean;
 mod lazy;
 mod numeric;
 mod print;
@@ -118,6 +119,7 @@ impl Default for Environment {
             variable::insert_variable_definition(&mut fn_map, n);
         }
         array::insert_array_functions(&mut fn_map);
+        boolean::insert_bool_functions(&mut fn_map);
         lazy::insert_lazy_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
@@ -131,8 +133,15 @@ impl Default for Environment {
 }
 
 impl Environment {
+    fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
+        self.vr_map
+            .iter_mut()
+            .rev()
+            .find_map(|map| map.get_mut(name))
+    }
+
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.vr_map.iter().rev().filter_map(|n| n.get(name)).next()
+        self.vr_map.iter().rev().find_map(|map| map.get(name))
     }
 
     pub fn get_variable_unwrap(&self, name: &str) -> RResult<Value> {
