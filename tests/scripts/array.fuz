@@ -16,3 +16,4 @@ arr !!
 arr @< 2 'baz, -> 'arr.
 arr !!
 arr ^, !!
+arr $, !!
