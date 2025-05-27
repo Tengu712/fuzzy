@@ -53,6 +53,7 @@ impl Value {
     fn format_for_repl(&self, env: &Environment) -> String {
         match self {
             Self::Nil => "()".to_string(),
+            Self::Top => "T".to_string(),
             Self::I8(n) => format!("{n} (i8)"),
             Self::U8(n) => format!("{n} (u8)"),
             Self::I16(n) => format!("{n} (i16)"),

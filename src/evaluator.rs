@@ -11,6 +11,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
+    Top,
     I8(i8),
     U8(u8),
     I16(i16),
@@ -33,6 +34,7 @@ pub enum Value {
 impl Value {
     fn from(token: Token) -> Self {
         match token {
+            Token::Top => Self::Top,
             Token::I8(n) => Self::I8(n),
             Token::U8(n) => Self::U8(n),
             Token::I16(n) => Self::I16(n),
@@ -54,7 +56,8 @@ impl Value {
 
     fn get_typeid(&self) -> String {
         match self {
-            Self::Nil => "nil".to_string(),
+            Self::Nil => "bool".to_string(),
+            Self::Top => "bool".to_string(),
             Self::I8(_) => "i8".to_string(),
             Self::U8(_) => "u8".to_string(),
             Self::I16(_) => "i16".to_string(),
@@ -77,7 +80,7 @@ impl Value {
 }
 
 const ALL_TYPES: &[&str] = &[
-    "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
+    "bool", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
     "string", "symbol", "[]", "{}",
 ];
 

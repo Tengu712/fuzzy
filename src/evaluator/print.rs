@@ -37,6 +37,7 @@ impl Value {
     fn format(&self) -> String {
         match self {
             Self::Nil => "()".to_string(),
+            Self::Top => "T".to_string(),
             Self::I8(n) => n.to_string(),
             Self::U8(n) => n.to_string(),
             Self::I16(n) => n.to_string(),
