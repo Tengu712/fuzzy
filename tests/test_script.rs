@@ -79,3 +79,8 @@ fn test_undefined_value_of_symbol_verb() {
 fn test_undefined_value_of_symbol_object() {
     run_wrong("tests/scripts/wrong-symbol-value-object.fuz");
 }
+
+#[test]
+fn test_wrong_cast() {
+    run_wrong("tests/scripts/wrong-cast.fuz");
+}
