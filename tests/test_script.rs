@@ -56,6 +56,11 @@ fn test_array() {
 }
 
 #[test]
+fn test_cast() {
+    run("tests/scripts/cast.fuz", "25\n3.14\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
@@ -73,4 +78,9 @@ fn test_undefined_value_of_symbol_verb() {
 #[test]
 fn test_undefined_value_of_symbol_object() {
     run_wrong("tests/scripts/wrong-symbol-value-object.fuz");
+}
+
+#[test]
+fn test_wrong_cast() {
+    run_wrong("tests/scripts/wrong-cast.fuz");
 }
