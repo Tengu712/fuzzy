@@ -1,3 +1,4 @@
+mod array;
 mod lazy;
 mod numeric;
 mod print;
@@ -113,6 +114,7 @@ impl Default for Environment {
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
         }
+        array::insert_array_functions(&mut fn_map);
         lazy::insert_lazy_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
