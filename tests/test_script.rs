@@ -56,6 +56,11 @@ fn test_array() {
 }
 
 #[test]
+fn test_cast() {
+    run("tests/scripts/cast.fuz", "25\n3.14\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
