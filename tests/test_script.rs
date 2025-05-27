@@ -49,7 +49,10 @@ fn test_lazy_block() {
 
 #[test]
 fn test_array() {
-    run("tests/scripts/array.fuz", "[1 2.3 hello]\n5\n[1 5 9 2 5]\n3\n");
+    run(
+        "tests/scripts/array.fuz",
+        "[1 2.3 hello]\n5\n[1 5 9 2 5]\n3\n2\n3\n",
+    );
 }
 
 #[test]
