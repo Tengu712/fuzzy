@@ -53,6 +53,13 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
             code: FunctionCode::Builtin(last),
         },
     );
+    map.insert(
+        "$>".to_string(),
+        Function {
+            types: vec!["_".to_string()],
+            code: FunctionCode::Builtin(push),
+        },
+    );
 }
 
 fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
@@ -102,6 +109,15 @@ fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let s = unwrap_subject(s, "$");
     Ok(s.last().cloned().unwrap_or(Value::Nil))
+}
+
+fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = unwrap_subject(s, "$>");
+    let Some(t) = args.pop() else {
+        panic!("type missmatched on '[]:$>'.");
+    };
+    s.push(t);
+    Ok(Value::Array(s))
 }
 
 fn unwrap_subject(s: Value, name: &str) -> Vec<Value> {

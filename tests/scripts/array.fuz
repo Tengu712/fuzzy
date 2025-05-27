@@ -17,3 +17,5 @@ arr @< 2 'baz, -> 'arr.
 arr !!
 arr ^, !!
 arr $, !!
+arr $> 3.14f32, -> 'arr.
+arr !!
