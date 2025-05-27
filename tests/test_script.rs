@@ -51,7 +51,7 @@ fn test_lazy_block() {
 fn test_array() {
     run(
         "tests/scripts/array.fuz",
-        "[1 2.3 hello]\n5\n[1 5 9 2 5]\n3\n2\n3\n[1 foo 3]\n",
+        "[1 2.3 hello]\n5\n[1 5 9 2 5]\n3\n2\n3\n[1 bar 3]\n[1 bar baz 3]\n",
     );
 }
 

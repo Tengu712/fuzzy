@@ -11,5 +11,7 @@
 arr #, !!
 arr @ 1, !!
 arr @ -1, !!
-arr @@ 1 "foo", -> 'arr.
+arr @@ 1 "bar", -> 'arr.
+arr !!
+arr @< 2 'baz, -> 'arr.
 arr !!
