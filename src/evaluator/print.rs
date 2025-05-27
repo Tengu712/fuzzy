@@ -23,31 +23,47 @@ pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
     );
 }
 
-macro_rules! define_print {
-    ($fn: ident) => {
-        fn $fn(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-            match &s {
-                Value::Nil => $fn!("()"),
-                Value::I8(n) => $fn!("{n}"),
-                Value::U8(n) => $fn!("{n}"),
-                Value::I16(n) => $fn!("{n}"),
-                Value::U16(n) => $fn!("{n}"),
-                Value::I32(n) => $fn!("{n}"),
-                Value::U32(n) => $fn!("{n}"),
-                Value::I64(n) => $fn!("{n}"),
-                Value::U64(n) => $fn!("{n}"),
-                Value::I128(n) => $fn!("{n}"),
-                Value::U128(n) => $fn!("{n}"),
-                Value::F32(n) => $fn!("{n}"),
-                Value::F64(n) => $fn!("{n}"),
-                Value::String(n) => $fn!("{n}"),
-                Value::Symbol(n) => $fn!("{n}"),
-                Value::Lazy(_) => panic!("tried to print lazy block."),
-                Value::Label(_) => panic!("tried to print label."),
-            }
-            Ok(s)
-        }
-    };
+fn print(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    print!("{}", s.format());
+    Ok(s)
 }
-define_print!(print);
-define_print!(println);
+
+fn println(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    println!("{}", s.format());
+    Ok(s)
+}
+
+impl Value {
+    fn format(&self) -> String {
+        match self {
+            Self::Nil => "()".to_string(),
+            Self::I8(n) => n.to_string(),
+            Self::U8(n) => n.to_string(),
+            Self::I16(n) => n.to_string(),
+            Self::U16(n) => n.to_string(),
+            Self::I32(n) => n.to_string(),
+            Self::U32(n) => n.to_string(),
+            Self::I64(n) => n.to_string(),
+            Self::U64(n) => n.to_string(),
+            Self::I128(n) => n.to_string(),
+            Self::U128(n) => n.to_string(),
+            Self::F32(n) => n.to_string(),
+            Self::F64(n) => n.to_string(),
+            Self::String(n) => n.clone(),
+            Self::Symbol(n) => n.clone(),
+            Self::Array(n) => {
+                let mut s = "[".to_string();
+                for (i, m) in n.iter().enumerate() {
+                    s.push_str(&m.format());
+                    if i < n.len() - 1 {
+                        s.push(' ');
+                    }
+                }
+                s.push(']');
+                s
+            }
+            Self::Lazy(_) => "{}".to_string(),
+            Self::Label(_) => panic!("tried to format label."),
+        }
+    }
+}

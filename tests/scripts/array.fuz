@@ -1,0 +1,21 @@
+-- Array test. --
+
+-- attom array
+[ 1 2.3f32 "hello" ] !!
+
+-- sentence array
+[ 1 2 + 3. 4 + 5 (1 2) {3. 4 5 !!} @] !!
+
+-- functions
+[ 1 2 3 ] -> 'arr.
+arr #, !!
+arr @ 1, !!
+arr @ -1, !!
+arr @@ 1 "bar", -> 'arr.
+arr !!
+arr @< 2 'baz, -> 'arr.
+arr !!
+arr ^, !!
+arr $, !!
+arr $> 3.14f32, -> 'arr.
+arr !!
