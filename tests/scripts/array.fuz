@@ -19,3 +19,7 @@ arr ^, !!
 arr $, !!
 arr $> 3.14f32, -> 'arr.
 arr !!
+arr @- 1, -> 'arr.
+arr !!
+arr $-, -> 'arr.
+arr !!

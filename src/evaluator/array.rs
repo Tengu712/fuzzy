@@ -60,6 +60,20 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
             code: FunctionCode::Builtin(push),
         },
     );
+    map.insert(
+        "@-".to_string(),
+        Function {
+            types: vec!["i32".to_string()],
+            code: FunctionCode::Builtin(remove),
+        },
+    );
+    map.insert(
+        "$-".to_string(),
+        Function {
+            types: Vec::new(),
+            code: FunctionCode::Builtin(pop),
+        },
+    );
 }
 
 fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
@@ -117,6 +131,20 @@ fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
         panic!("type missmatched on '[]:$>'.");
     };
     s.push(t);
+    Ok(Value::Array(s))
+}
+
+fn remove(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = unwrap_subject(s, "@-");
+    let o = unwrap_index(args.pop(), "@-");
+    let i = convert_index(o, s.len())?;
+    s.remove(i);
+    Ok(Value::Array(s))
+}
+
+fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let mut s = unwrap_subject(s, "$-");
+    s.pop();
     Ok(Value::Array(s))
 }
 
