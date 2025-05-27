@@ -231,6 +231,10 @@ fn eval_sentence_inner(
     // collect arguments
     let mut args = Vec::new();
     while !check_argument_types(env, &t, vn, &args)? {
+        if let Some(arg) = env.evaluated.take() {
+            args.push(arg);
+            continue;
+        }
         if is_end_sentence(tokens) {
             return Err(format!("error: too few arguments passed to '{t}' on '{vn}'.").into());
         }
@@ -270,7 +274,7 @@ fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> 
         .types
         .iter()
         .zip(args.iter())
-        .all(|(n, m)| n == &m.get_typeid())
+        .all(|(n, m)| n == &m.get_typeid() || n == "_")
     {
         Ok(true)
     } else {
