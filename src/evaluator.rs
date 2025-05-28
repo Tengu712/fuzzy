@@ -1,5 +1,6 @@
 mod array;
 mod boolean;
+mod cmp;
 mod lazy;
 mod numeric;
 mod print;
@@ -117,6 +118,7 @@ impl Default for Environment {
             fn_map.insert(n.to_string(), HashMap::new());
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
+            cmp::insert_compare_functions(&mut fn_map, n);
         }
         array::insert_array_functions(&mut fn_map);
         boolean::insert_bool_functions(&mut fn_map);
