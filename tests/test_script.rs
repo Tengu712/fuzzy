@@ -64,7 +64,7 @@ fn test_cast() {
 fn test_bool() {
     run(
         "tests/scripts/bool.fuz",
-        "Hello, world!\nT()()()TTT()\nT()T()T()T()\n",
+        "Hello, world!\nT()()()TTT()\nT()T()T()T()\n()()TT()()TTT()()TTTT()T()\n",
     );
 }
 
