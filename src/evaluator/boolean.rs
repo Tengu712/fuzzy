@@ -5,6 +5,13 @@ pub fn insert_bool_functions(maps: &mut FunctionMap) {
         .get_mut("bool")
         .unwrap_or_else(|| panic!("function map for 'bool' not found."));
     map.insert(
+        "~".to_string(),
+        Function {
+            types: vec![],
+            code: FunctionCode::Builtin(not),
+        },
+    );
+    map.insert(
         ">>".to_string(),
         Function {
             types: vec!["{}".to_string()],
@@ -32,6 +39,14 @@ pub fn insert_bool_functions(maps: &mut FunctionMap) {
             code: FunctionCode::Builtin(or),
         },
     );
+}
+
+fn not(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    if unwrap_subject(s, "~") {
+        Ok(Value::Nil)
+    } else {
+        Ok(Value::Top)
+    }
 }
 
 fn on_then(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {

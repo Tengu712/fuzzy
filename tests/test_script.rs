@@ -64,7 +64,15 @@ fn test_cast() {
 fn test_bool() {
     run(
         "tests/scripts/bool.fuz",
-        "Hello, world!\nT()()()TTT()\nT()T()T()T()\n()()TT()()TTT()()TTTT()T()\n",
+        "()T\nHello, world!\nT()()()TTT()\nT()T()T()T()\n()()TT()()TTT()()TTTT()T()\n",
+    );
+}
+
+#[test]
+fn test_conditional_branch() {
+    run(
+        "tests/scripts/conditional-branch.fuz",
+        "5 > 3\nfalse\nbar baz\nok\nok\nab\n",
     );
 }
 

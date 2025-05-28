@@ -11,6 +11,13 @@ pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &str) {
             code: FunctionCode::Builtin(equal),
         },
     );
+    map.insert(
+        "!=".to_string(),
+        Function {
+            types: vec![ty.to_string()],
+            code: FunctionCode::Builtin(not_equal),
+        },
+    );
 
     if ty == "[]" || ty == "{}" {
         return;
@@ -49,6 +56,15 @@ pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &str) {
 fn equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
     let o = pop_object(&s, args, "==");
     if s.equal(&o) {
+        Ok(Value::Top)
+    } else {
+        Ok(Value::Nil)
+    }
+}
+
+fn not_equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
+    let o = pop_object(&s, args, "!=");
+    if !s.equal(&o) {
         Ok(Value::Top)
     } else {
         Ok(Value::Nil)
