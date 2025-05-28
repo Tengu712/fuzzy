@@ -11,6 +11,7 @@ use std::{
 pub fn run() {
     let mut env = Environment::default();
     env.vr_map.push(HashMap::new());
+    env.evaluated.push(None);
     loop {
         match run_inner(&mut env) {
             Ok(true) => (),
@@ -38,7 +39,7 @@ fn run_inner(env: &mut Environment) -> RResult<bool> {
     // eval
     let mut tokens = lexer::lex(input)?;
     tokens.reverse();
-    let value = evaluator::eval_block(env, &mut tokens)?
+    let value = evaluator::eval_block_directly(env, &mut tokens)?
         .pop()
         .expect("evaluating block result is empty.");
 
@@ -53,6 +54,7 @@ impl Value {
     fn format_for_repl(&self, env: &Environment) -> String {
         match self {
             Self::Nil => "()".to_string(),
+            Self::Top => "T".to_string(),
             Self::I8(n) => format!("{n} (i8)"),
             Self::U8(n) => format!("{n} (u8)"),
             Self::I16(n) => format!("{n} (i16)"),

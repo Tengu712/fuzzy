@@ -17,10 +17,8 @@ fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Va
     let Value::Lazy(mut s) = s else {
         panic!("type missmatched on '{{}}:@'.");
     };
-    env.vr_map.push(HashMap::new());
     let result = eval_block(env, &mut s)?
         .pop()
         .expect("evaluating block result is empty.");
-    env.vr_map.pop();
     Ok(result)
 }

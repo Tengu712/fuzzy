@@ -23,27 +23,31 @@ pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &str) {
 macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-            let Some(Value::Symbol(n)) = args.pop() else {
+            let Some(Value::Symbol(o)) = args.pop() else {
                 panic!("type missmatched on '{}:{}'.", s.get_typeid(), $name);
             };
-            if !can_define(env, &n) {
-                return Err(format!("error: cannot redefine variable '{n}'.").into());
+            if o == "T" {
+                return Err(format!("error: cannot redefine 'T'.").into());
+            }
+            let n = env.get_variable_mut(&o);
+            if !n.as_ref().map(|n| n.mutable).unwrap_or(true) {
+                return Err(format!("error: cannot redefine variable '{o}'.").into());
             }
             let v = Variable {
                 value: s,
                 mutable: $mutable,
             };
-            env.vr_map
-                .last_mut()
-                .expect("variable map stack is empty.")
-                .insert(n, v);
+            if let Some(n) = n {
+                *n = v;
+            } else {
+                env.vr_map
+                    .last_mut()
+                    .expect("variable map stack is empty.")
+                    .insert(o, v);
+            }
             Ok(Value::Nil)
         }
     };
 }
 define_variable_definition!(define_mutable, "->", true);
 define_variable_definition!(define_immutable, "=>", false);
-
-fn can_define(env: &mut Environment, name: &str) -> bool {
-    env.get_variable(name).map(|n| n.mutable).unwrap_or(true)
-}

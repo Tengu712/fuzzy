@@ -58,6 +58,14 @@ fn test_define_defined_symbol_variable() {
 }
 
 #[test]
+fn test_define_variable_upper_scope() {
+    run(
+        "(1 => 'a)\na\n#exit",
+        ">> ()\n>> error: undefined variable 'a' found.\n>> ",
+    );
+}
+
+#[test]
 fn test_redefine_variable_same_scope() {
     run(
         "1 -> 'a.\n2 => 'a.\na\n#exit",
@@ -67,7 +75,7 @@ fn test_redefine_variable_same_scope() {
 
 #[test]
 fn test_redefine_variable_upper_scope() {
-    run("1 -> 'a. (2 => 'a)\na\n#exit", ">> ()\n>> 1 (i32)\n>> ");
+    run("1 -> 'a. (2 => 'a)\na\n#exit", ">> ()\n>> 2 (i32)\n>> ");
 }
 
 #[test]

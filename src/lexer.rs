@@ -13,6 +13,7 @@ pub enum Token {
     LBracket,
     RBracket,
     // atoms
+    Top,
     I8(i8),
     U8(u8),
     I16(i16),
@@ -47,6 +48,8 @@ impl Token {
             Self::LBracket
         } else if s == "]" {
             Self::RBracket
+        } else if s == "T" {
+            Self::Top
         } else if let Some(n) = parse_number(s) {
             n
         } else if s.starts_with("\"") && s.ends_with("\"") {
@@ -170,6 +173,12 @@ mod test {
     #[test]
     fn test_brackets() {
         let tokens = lex("[1 + 2].").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_top() {
+        let tokens = lex("foo B T 'T").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 

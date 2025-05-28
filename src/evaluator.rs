@@ -1,4 +1,6 @@
 mod array;
+mod boolean;
+mod cmp;
 mod lazy;
 mod numeric;
 mod print;
@@ -11,6 +13,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
+    Top,
     I8(i8),
     U8(u8),
     I16(i16),
@@ -33,6 +36,7 @@ pub enum Value {
 impl Value {
     fn from(token: Token) -> Self {
         match token {
+            Token::Top => Self::Top,
             Token::I8(n) => Self::I8(n),
             Token::U8(n) => Self::U8(n),
             Token::I16(n) => Self::I16(n),
@@ -54,7 +58,8 @@ impl Value {
 
     fn get_typeid(&self) -> String {
         match self {
-            Self::Nil => "nil".to_string(),
+            Self::Nil => "bool".to_string(),
+            Self::Top => "bool".to_string(),
             Self::I8(_) => "i8".to_string(),
             Self::U8(_) => "u8".to_string(),
             Self::I16(_) => "i16".to_string(),
@@ -77,7 +82,7 @@ impl Value {
 }
 
 const ALL_TYPES: &[&str] = &[
-    "nil", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
+    "bool", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
     "string", "symbol", "[]", "{}",
 ];
 
@@ -103,7 +108,7 @@ pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 pub struct Environment {
     pub fn_map: FunctionMap,
     pub vr_map: VariableMapStack,
-    evaluated: Option<Value>,
+    pub evaluated: Vec<Option<Value>>,
 }
 
 impl Default for Environment {
@@ -113,8 +118,10 @@ impl Default for Environment {
             fn_map.insert(n.to_string(), HashMap::new());
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
+            cmp::insert_compare_functions(&mut fn_map, n);
         }
         array::insert_array_functions(&mut fn_map);
+        boolean::insert_bool_functions(&mut fn_map);
         lazy::insert_lazy_functions(&mut fn_map);
         numeric::insert_numeric_functions(&mut fn_map);
         symbol::insert_symbol_value(&mut fn_map);
@@ -122,14 +129,18 @@ impl Default for Environment {
         Self {
             fn_map,
             vr_map: Vec::new(),
-            evaluated: None,
+            evaluated: Vec::new(),
         }
     }
 }
 
 impl Environment {
+    fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
+        self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
+    }
+
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.vr_map.iter().rev().filter_map(|n| n.get(name)).next()
+        self.vr_map.iter().rev().find_map(|n| n.get(name))
     }
 
     pub fn get_variable_unwrap(&self, name: &str) -> RResult<Value> {
@@ -138,6 +149,16 @@ impl Environment {
             Ok(n.value.clone())
         } else {
             Err(format!("error: undefined variable '{name}' found.").into())
+        }
+    }
+
+    fn take_evaluated(&mut self) -> Option<Value> {
+        self.evaluated.last_mut().and_then(|n| n.take())
+    }
+
+    fn set_evaluated(&mut self, v: Value) {
+        if let Some(n) = self.evaluated.last_mut() {
+            *n = Some(v);
         }
     }
 }
@@ -151,15 +172,28 @@ impl Environment {
 /// If the last statement ends with `.`, `Value::Nil` is appended to the results.
 ///
 /// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
+pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+    env.vr_map.push(HashMap::new());
+    env.evaluated.push(None);
+    let n = eval_block_directly(env, tokens);
+    env.vr_map.pop();
+    env.evaluated.pop();
+    n
+}
+
+/// A function to evaluate a block without any environment setup.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
 ///
 /// NOTE: This function does not manage the environment's variable map stack.
 ///       The caller is responsible for managing the stack.
 ///       This is to accommodate the behavior where top-level blocks in a REPL
 ///       have their environments expanded globally.
-pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+pub fn eval_block_directly(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
     let mut values = Vec::new();
     let mut dotted = true;
-    while !tokens.is_empty() || env.evaluated.is_some() {
+    while !tokens.is_empty() || env.evaluated.last().map(|n| n.is_some()).unwrap_or(false) {
         values.push(eval_sentence(env, tokens)?);
         dotted = eat_dot(tokens);
     }
@@ -178,7 +212,7 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
 fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut s = env.evaluated.take();
+    let mut s = env.take_evaluated();
     loop {
         let n = eval_sentence_inner(env, tokens, s)?;
         if matches!(tokens.last(), Some(Token::Comma)) {
@@ -212,7 +246,7 @@ fn eval_sentence_inner(
     // get verb
     let v = eval_expression(env, tokens)?;
     let Value::Label(vn) = &v else {
-        env.evaluated = Some(v);
+        env.set_evaluated(v);
         return Ok(s);
     };
 
@@ -224,14 +258,14 @@ fn eval_sentence_inner(
         .map(|n| n.contains_key(vn))
         .unwrap_or(false)
     {
-        env.evaluated = Some(v);
+        env.set_evaluated(v);
         return Ok(s);
     };
 
     // collect arguments
     let mut args = Vec::new();
     while !check_argument_types(env, &t, vn, &args)? {
-        if let Some(arg) = env.evaluated.take() {
+        if let Some(arg) = env.take_evaluated() {
             args.push(arg);
             continue;
         }
@@ -295,11 +329,9 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
                 return Err("error: unmatched '(' found.".into());
             };
-            env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut n)?
                 .pop()
                 .expect("evaluating block result is empty.");
-            env.vr_map.pop();
             Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
@@ -315,9 +347,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             else {
                 return Err("error: unmatched '[' found.".into());
             };
-            env.vr_map.push(HashMap::new());
             let results = eval_block(env, &mut n)?;
-            env.vr_map.pop();
             Ok(Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),

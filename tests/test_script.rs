@@ -61,6 +61,22 @@ fn test_cast() {
 }
 
 #[test]
+fn test_bool() {
+    run(
+        "tests/scripts/bool.fuz",
+        "()T\nHello, world!\nT()()()TTT()\nT()T()T()T()\n()()TT()()TTT()()TTTT()T()\n",
+    );
+}
+
+#[test]
+fn test_conditional_branch() {
+    run(
+        "tests/scripts/conditional-branch.fuz",
+        "5 > 3\nfalse\nbar baz\nok\nok\nab\n",
+    );
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
