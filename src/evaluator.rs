@@ -134,14 +134,11 @@ impl Default for Environment {
 
 impl Environment {
     fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
-        self.vr_map
-            .iter_mut()
-            .rev()
-            .find_map(|map| map.get_mut(name))
+        self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
     }
 
     pub fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.vr_map.iter().rev().find_map(|map| map.get(name))
+        self.vr_map.iter().rev().find_map(|n| n.get(name))
     }
 
     pub fn get_variable_unwrap(&self, name: &str) -> RResult<Value> {
