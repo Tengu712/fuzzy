@@ -107,7 +107,7 @@ pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 pub struct Environment {
     pub fn_map: FunctionMap,
     pub vr_map: VariableMapStack,
-    evaluated: Option<Value>,
+    pub evaluated: Vec<Option<Value>>,
 }
 
 impl Default for Environment {
@@ -127,7 +127,7 @@ impl Default for Environment {
         Self {
             fn_map,
             vr_map: Vec::new(),
-            evaluated: None,
+            evaluated: Vec::new(),
         }
     }
 }
@@ -152,6 +152,16 @@ impl Environment {
             Err(format!("error: undefined variable '{name}' found.").into())
         }
     }
+
+    fn take_evaluated(&mut self) -> Option<Value> {
+        self.evaluated.last_mut().and_then(|n| n.take())
+    }
+
+    fn set_evaluated(&mut self, v: Value) {
+        if let Some(n) = self.evaluated.last_mut() {
+            *n = Some(v);
+        }
+    }
 }
 
 /// A function to evaluate a block.
@@ -163,15 +173,28 @@ impl Environment {
 /// If the last statement ends with `.`, `Value::Nil` is appended to the results.
 ///
 /// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
+pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+    env.vr_map.push(HashMap::new());
+    env.evaluated.push(None);
+    let n = eval_block_directly(env, tokens);
+    env.vr_map.pop();
+    env.evaluated.pop();
+    n
+}
+
+/// A function to evaluate a block without any environment setup.
+///
+/// * `env` - The current environment.
+/// * `tokens` - All tokens in the block in reverse order.
 ///
 /// NOTE: This function does not manage the environment's variable map stack.
 ///       The caller is responsible for managing the stack.
 ///       This is to accommodate the behavior where top-level blocks in a REPL
 ///       have their environments expanded globally.
-pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+pub fn eval_block_directly(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
     let mut values = Vec::new();
     let mut dotted = true;
-    while !tokens.is_empty() || env.evaluated.is_some() {
+    while !tokens.is_empty() || env.evaluated.last().map(|n| n.is_some()).unwrap_or(false) {
         values.push(eval_sentence(env, tokens)?);
         dotted = eat_dot(tokens);
     }
@@ -190,7 +213,7 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
 fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
-    let mut s = env.evaluated.take();
+    let mut s = env.take_evaluated();
     loop {
         let n = eval_sentence_inner(env, tokens, s)?;
         if matches!(tokens.last(), Some(Token::Comma)) {
@@ -224,7 +247,7 @@ fn eval_sentence_inner(
     // get verb
     let v = eval_expression(env, tokens)?;
     let Value::Label(vn) = &v else {
-        env.evaluated = Some(v);
+        env.set_evaluated(v);
         return Ok(s);
     };
 
@@ -236,14 +259,14 @@ fn eval_sentence_inner(
         .map(|n| n.contains_key(vn))
         .unwrap_or(false)
     {
-        env.evaluated = Some(v);
+        env.set_evaluated(v);
         return Ok(s);
     };
 
     // collect arguments
     let mut args = Vec::new();
     while !check_argument_types(env, &t, vn, &args)? {
-        if let Some(arg) = env.evaluated.take() {
+        if let Some(arg) = env.take_evaluated() {
             args.push(arg);
             continue;
         }
@@ -307,11 +330,9 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
                 return Err("error: unmatched '(' found.".into());
             };
-            env.vr_map.push(HashMap::new());
             let result = eval_block(env, &mut n)?
                 .pop()
                 .expect("evaluating block result is empty.");
-            env.vr_map.pop();
             Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
@@ -327,9 +348,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             else {
                 return Err("error: unmatched '[' found.".into());
             };
-            env.vr_map.push(HashMap::new());
             let results = eval_block(env, &mut n)?;
-            env.vr_map.pop();
             Ok(Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),

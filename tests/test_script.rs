@@ -61,6 +61,11 @@ fn test_cast() {
 }
 
 #[test]
+fn test_bool() {
+    run("tests/scripts/bool.fuz", "Hello, world!\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

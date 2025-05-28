@@ -1,0 +1,6 @@
+-- Bool test. --
+
+T >> { "Hello, " ! }
+T !> { "Bar" ! }
+() >> { "baz" !! }
+() !> { "world!" !! }
