@@ -3,16 +3,11 @@ use crate::{
     evaluator::{self, Environment},
     lexer,
 };
-use std::{
-    collections::HashMap,
-    io::{self, Write},
-};
+use std::io::{self, Write};
 
 pub fn run() {
     let mut env = Environment::default();
-    env.vr_map.push(HashMap::new());
-    env.args.push(Vec::new());
-    env.evaluated.push(None);
+    env.prepare_block_scope(Some(Vec::new()));
     loop {
         match run_inner(&mut env) {
             Ok(true) => (),

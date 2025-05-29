@@ -10,17 +10,31 @@ pub struct Variable {
     pub mutable: bool,
 }
 
-pub type VariableMapStack = Vec<HashMap<String, Variable>>;
-
 #[derive(Default)]
 pub struct Environment {
-    pub fn_map: functions::FunctionMap,
-    pub vr_map: VariableMapStack,
-    pub args: Vec<Vec<value::Value>>,
-    pub evaluated: Vec<Option<value::Value>>,
+    fn_map: functions::FunctionMap,
+    vr_map: Vec<HashMap<String, Variable>>,
+    args: Vec<Vec<value::Value>>,
+    evaluated: Vec<Option<value::Value>>,
 }
 
 impl Environment {
+    pub fn prepare_block_scope(&mut self, args: Option<Vec<value::Value>>) {
+        if let Some(n) = args {
+            self.args.push(n);
+        }
+        self.vr_map.push(HashMap::new());
+        self.evaluated.push(None);
+    }
+
+    pub fn cleanup_block_scope(&mut self, should_pop_args: bool) {
+        if should_pop_args {
+            self.args.pop();
+        }
+        self.vr_map.pop();
+        self.evaluated.pop();
+    }
+
     fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
         self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
     }
@@ -83,21 +97,10 @@ pub fn eval_block(
     tokens: &mut Vec<Token>,
     args: Option<Vec<value::Value>>,
 ) -> RResult<Vec<value::Value>> {
-    let args_is_some = args.is_some();
-    if args_is_some {
-        env.args.push(args.unwrap());
-    };
-    env.vr_map.push(HashMap::new());
-    env.evaluated.push(None);
-
+    let should_pop_args = args.is_some();
+    env.prepare_block_scope(args);
     let results = eval_block_directly(env, tokens);
-
-    if args_is_some {
-        env.args.pop();
-    }
-    env.vr_map.pop();
-    env.evaluated.pop();
-
+    env.cleanup_block_scope(should_pop_args);
     results
 }
 
