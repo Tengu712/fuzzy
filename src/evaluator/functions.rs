@@ -1,3 +1,27 @@
+macro_rules! builtin_fn {
+    ($name: expr, $types: expr, $fn: expr) => {
+        ($name.to_string(), ($types, FunctionCode::Builtin($fn)))
+    };
+}
+
+macro_rules! extract_variant {
+    ($value: expr, $variant: ident) => {
+        match $value {
+            Value::$variant(n) => n,
+            _ => panic!("type missmatched."),
+        }
+    };
+}
+
+macro_rules! pop_extract_variant {
+    ($value: expr, $variant: ident) => {
+        match $value.pop() {
+            Some(Value::$variant(n)) => n,
+            _ => panic!("type missmatched."),
+        }
+    };
+}
+
 mod array;
 mod boolean;
 mod cmp;
@@ -70,13 +94,6 @@ impl FunctionMap {
             .unwrap_or_else(|| panic!("no function defined on {ty}."))
             .get(name)
             .unwrap_or_else(|| panic!("function {name} not defined on {ty}."))
-    }
-
-    fn insert(&mut self, ty: &TypeId, name: String, fun: Function) {
-        if !self.map.contains_key(ty) {
-            self.map.insert(ty.clone(), HashMap::new());
-        }
-        self.map.get_mut(ty).unwrap().insert(name, fun);
     }
 
     fn insert_all(&mut self, ty: &TypeId, funs: Vec<(String, Function)>) {

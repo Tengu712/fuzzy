@@ -5,9 +5,9 @@ mod value;
 use crate::{lexer::*, *};
 use std::collections::HashMap;
 
-pub struct Variable {
-    pub value: value::Value,
-    pub mutable: bool,
+struct Variable {
+    value: value::Value,
+    mutable: bool,
 }
 
 #[derive(Default)]
@@ -39,11 +39,11 @@ impl Environment {
         self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
     }
 
-    pub fn get_variable(&self, name: &str) -> Option<&Variable> {
+    fn get_variable(&self, name: &str) -> Option<&Variable> {
         self.vr_map.iter().rev().find_map(|n| n.get(name))
     }
 
-    pub fn get_variable_unwrap(&self, name: &str) -> RResult<value::Value> {
+    fn get_variable_unwrap(&self, name: &str) -> RResult<value::Value> {
         if let Some(n) = self.get_variable(name) {
             // OPTIMIZE: remove clone.
             Ok(n.value.clone())

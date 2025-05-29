@@ -4,38 +4,26 @@ pub fn insert(fm: &mut FunctionMap) {
     fm.insert_all(
         &TypeId::Lazy,
         vec![
-            (
-                "@".to_string(),
-                (Vec::new(), FunctionCode::Builtin(eval_lazy_block)),
-            ),
-            (
-                ":".to_string(),
-                (vec![TypeId::Array], FunctionCode::Builtin(define_function)),
-            ),
+            builtin_fn!("@", vec![], eval_lazy_block),
+            builtin_fn!(":", vec![TypeId::Array], define_function),
         ],
     );
 }
 
 fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "@");
-    let result = eval_block(env, &mut s, Some(Vec::new()))?
-        .pop()
-        .expect("evaluating block result is empty.");
-    Ok(result)
+    let mut s = extract_variant!(s, Lazy);
+    eval(env, &mut s, Some(Vec::new()))
 }
 
 fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s, ":");
-    let Some(Value::Array(o)) = args.pop() else {
-        panic!("type missmatched on '{}::'.", TypeId::Lazy);
-    };
+    let s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, Array);
 
-    let types = convert_symbols_to_typeids(o)?;
-    let t = TypeId::Function(types.clone());
+    let ts = convert_symbols_to_typeids(o)?;
+    let t = TypeId::Function(ts.clone());
 
     if !env.fn_map.is_defined(&t, "@") {
-        env.fn_map
-            .insert(&t, "@".to_string(), (types, FunctionCode::Builtin(call)));
+        env.fn_map.insert_all(&t, vec![builtin_fn!("@", ts, call)]);
         variable::insert(&mut env.fn_map, &t);
     }
 
@@ -56,20 +44,18 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
 }
 
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let Value::Function((_, mut s)) = s else {
-        panic!("type missmatched on '{}:@'.", s.typeid());
-    };
+    let mut s = extract_variant!(s, Function);
     args.reverse();
-    let result = eval_block(env, &mut s, Some(args))?
+    eval(env, &mut s.1, Some(args))
+}
+
+fn eval(
+    env: &mut Environment,
+    tokens: &mut Vec<Token>,
+    args: Option<Vec<Value>>,
+) -> RResult<Value> {
+    let result = eval_block(env, tokens, args)?
         .pop()
         .expect("evaluating block result is empty.");
     Ok(result)
-}
-
-fn unwrap_subject(s: Value, name: &str) -> Vec<Token> {
-    if let Value::Lazy(s) = s {
-        s
-    } else {
-        panic!("type missmatched on '{}:{name}'.", TypeId::Lazy);
-    }
 }
