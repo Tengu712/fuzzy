@@ -349,13 +349,13 @@ fn check_argument_types(
             .types
             .iter()
             .enumerate()
-            .map(|(i, n)| format!("({i}) {n}"))
+            .map(|(i, n)| format!("({}) {n}", i + 1))
             .collect::<Vec<_>>()
             .join(", ");
         let instead = args
             .iter()
             .enumerate()
-            .map(|(i, n)| format!("({i}) {}", n.get_typeid()))
+            .map(|(i, n)| format!("({}) {}", i + 1, n.get_typeid()))
             .collect::<Vec<_>>()
             .join(", ");
         Err(
