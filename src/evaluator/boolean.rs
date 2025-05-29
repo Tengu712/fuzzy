@@ -3,7 +3,7 @@ use super::{types::TypeId, *};
 pub fn insert_bool_functions(maps: &mut FunctionMap) {
     let map = maps
         .get_mut(&TypeId::Bool)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Bool.to_string()));
+        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Bool));
 
     map.insert(
         "~".to_string(),
@@ -90,7 +90,7 @@ fn unwrap_subject(s: Value, name: &str) -> bool {
     match s {
         Value::Nil => false,
         Value::Top => true,
-        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool.to_string()),
+        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
     }
 }
 
@@ -98,7 +98,7 @@ fn unwrap_object(s: Option<Value>, name: &str) -> bool {
     match s {
         Some(Value::Nil) => false,
         Some(Value::Top) => true,
-        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool.to_string()),
+        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
     }
 }
 
@@ -106,6 +106,6 @@ fn unwrap_lazy_block(s: Option<Value>, name: &str) -> Vec<Token> {
     if let Some(Value::Lazy(n)) = s {
         n
     } else {
-        panic!("type missmatched on '{}:{name}'.", TypeId::Bool.to_string());
+        panic!("type missmatched on '{}:{name}'.", TypeId::Bool);
     }
 }

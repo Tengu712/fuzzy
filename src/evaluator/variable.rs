@@ -3,7 +3,7 @@ use super::{types::TypeId, *};
 pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &TypeId) {
     let map = maps
         .get_mut(ty)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", ty.to_string()));
+        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
 
     map.insert(
         "->".to_string(),
@@ -25,11 +25,7 @@ macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
             let Some(Value::Symbol(o)) = args.pop() else {
-                panic!(
-                    "type missmatched on '{}:{}'.",
-                    s.get_typeid().to_string(),
-                    $name
-                );
+                panic!("type missmatched on '{}:{}'.", s.get_typeid(), $name,);
             };
             if o == "T" {
                 return Err(format!("error: cannot redefine 'T'.").into());

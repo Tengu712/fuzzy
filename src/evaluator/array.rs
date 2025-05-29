@@ -3,7 +3,7 @@ use super::{types::TypeId, *};
 pub fn insert_array_functions(maps: &mut FunctionMap) {
     let map = maps
         .get_mut(&TypeId::Array)
-        .unwrap_or_else(|| panic!("function map for '[]' not found."));
+        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Array));
 
     map.insert(
         "#".to_string(),
@@ -98,7 +98,7 @@ fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value
     let mut s = unwrap_subject(s, "@@");
     let o = unwrap_index(args.pop(), "@@");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:@@'.", TypeId::Array.to_string());
+        panic!("type missmatched on '{}:@@'.", TypeId::Array);
     };
     let i = convert_index(o, s.len())?;
     s[i] = t;
@@ -109,7 +109,7 @@ fn insert(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value>
     let mut s = unwrap_subject(s, "@<");
     let o = unwrap_index(args.pop(), "@<");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:@<'.", TypeId::Array.to_string());
+        panic!("type missmatched on '{}:@<'.", TypeId::Array);
     };
     let i = convert_index(o, s.len())?;
     s.insert(i, t);
@@ -129,7 +129,7 @@ fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = unwrap_subject(s, "$>");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:$>'.", TypeId::Array.to_string());
+        panic!("type missmatched on '{}:$>'.", TypeId::Array);
     };
     s.push(t);
     Ok(Value::Array(s))
@@ -153,10 +153,7 @@ fn unwrap_subject(s: Value, name: &str) -> Vec<Value> {
     if let Value::Array(s) = s {
         s
     } else {
-        panic!(
-            "type missmatched on '{}:{name}'.",
-            TypeId::Array.to_string()
-        );
+        panic!("type missmatched on '{}:{name}'.", TypeId::Array);
     }
 }
 
@@ -164,10 +161,7 @@ fn unwrap_index(o: Option<Value>, name: &str) -> i32 {
     if let Some(Value::I32(o)) = o {
         o
     } else {
-        panic!(
-            "type missmatched on '{}:{name}'.",
-            TypeId::Array.to_string()
-        );
+        panic!("type missmatched on '{}:{name}'.", TypeId::Array);
     }
 }
 

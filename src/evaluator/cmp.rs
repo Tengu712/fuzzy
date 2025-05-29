@@ -3,7 +3,7 @@ use super::{types::TypeId, *};
 pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &TypeId) {
     let map = maps
         .get_mut(ty)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", ty.to_string()));
+        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
 
     map.insert(
         "==".to_string(),
@@ -112,10 +112,7 @@ fn pop_object(s: &Value, mut args: Vec<Value>, name: &str) -> Value {
     if let Some(o) = args.pop() {
         o
     } else {
-        panic!(
-            "type missmatched on '{}:{name}'.",
-            s.get_typeid().to_string()
-        );
+        panic!("type missmatched on '{}:{name}'.", s.get_typeid(),);
     }
 }
 
@@ -150,8 +147,8 @@ macro_rules! define_inequality_compare {
                 }
                 _ => panic!(
                     "tried to compare {} and {}",
-                    self.get_typeid().to_string(),
-                    other.get_typeid().to_string(),
+                    self.get_typeid(),
+                    other.get_typeid(),
                 ),
             }
         }
@@ -189,8 +186,8 @@ impl Value {
             }
             _ => panic!(
                 "tried to compare {} and {}",
-                self.get_typeid().to_string(),
-                other.get_typeid().to_string(),
+                self.get_typeid(),
+                other.get_typeid(),
             ),
         }
     }

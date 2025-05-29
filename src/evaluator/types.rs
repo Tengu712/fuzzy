@@ -1,4 +1,5 @@
 use crate::RResult;
+use std::fmt::{Display, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeId {
@@ -20,7 +21,31 @@ pub enum TypeId {
     Symbol,
     Array,
     Lazy,
-    Args(Vec<TypeId>),
+}
+
+impl Display for TypeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
+        match self {
+            Self::Any => write!(f, "_"),
+            Self::Bool => write!(f, "bool"),
+            Self::I8 => write!(f, "i8"),
+            Self::U8 => write!(f, "u8"),
+            Self::I16 => write!(f, "i16"),
+            Self::U16 => write!(f, "u16"),
+            Self::I32 => write!(f, "i32"),
+            Self::U32 => write!(f, "u32"),
+            Self::I64 => write!(f, "i64"),
+            Self::U64 => write!(f, "u64"),
+            Self::I128 => write!(f, "i128"),
+            Self::U128 => write!(f, "u128"),
+            Self::F32 => write!(f, "f32"),
+            Self::F64 => write!(f, "f64"),
+            Self::String => write!(f, "string"),
+            Self::Symbol => write!(f, "symbol"),
+            Self::Array => write!(f, "[]"),
+            Self::Lazy => write!(f, "{{}}"),
+        }
+    }
 }
 
 impl TypeId {
@@ -45,40 +70,6 @@ impl TypeId {
             "[]" => Ok(Self::Array),
             "{}" => Ok(Self::Lazy),
             _ => Err(format!("error: typename '{s}' not defined.").into()),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Any => "_".to_string(),
-            Self::Bool => "bool".to_string(),
-            Self::I8 => "i8".to_string(),
-            Self::U8 => "u8".to_string(),
-            Self::I16 => "i16".to_string(),
-            Self::U16 => "u16".to_string(),
-            Self::I32 => "i32".to_string(),
-            Self::U32 => "u32".to_string(),
-            Self::I64 => "i64".to_string(),
-            Self::U64 => "u64".to_string(),
-            Self::I128 => "i128".to_string(),
-            Self::U128 => "u128".to_string(),
-            Self::F32 => "f32".to_string(),
-            Self::F64 => "f64".to_string(),
-            Self::String => "string".to_string(),
-            Self::Symbol => "symbol".to_string(),
-            Self::Array => "[]".to_string(),
-            Self::Lazy => "{}".to_string(),
-            Self::Args(n) => {
-                let mut s = "[".to_string();
-                for (i, t) in n.iter().enumerate() {
-                    s.push_str(&t.to_string());
-                    if i < n.len() - 1 {
-                        s.push(' ');
-                    }
-                }
-                s.push(']');
-                s
-            }
         }
     }
 }

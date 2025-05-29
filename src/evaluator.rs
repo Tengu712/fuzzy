@@ -267,11 +267,7 @@ fn eval_sentence_inner(
             continue;
         }
         if is_end_sentence(tokens) {
-            return Err(format!(
-                "error: too few arguments passed to '{vn}' on '{}'.",
-                t.to_string(),
-            )
-            .into());
+            return Err(format!("error: too few arguments passed to '{vn}' on '{t}'.").into());
         }
         let arg = eval_sentence_inner(env, tokens, None)?;
         let arg = expand_label(env, arg)?;
@@ -303,12 +299,11 @@ fn check_argument_types(
     v: &str,
     args: &[Value],
 ) -> RResult<bool> {
-    let f = env.fn_map.get(t).and_then(|n| n.get(v)).unwrap_or_else(|| {
-        panic!(
-            "tried to get undefined function '{v}' on '{}'",
-            t.to_string()
-        )
-    });
+    let f = env
+        .fn_map
+        .get(t)
+        .and_then(|n| n.get(v))
+        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{t}'"));
     if f.types.len() > args.len() {
         Ok(false)
     } else if f
@@ -319,11 +314,7 @@ fn check_argument_types(
     {
         Ok(true)
     } else {
-        Err(format!(
-            "error: type missmatched arguments passed to '{v}' on '{}'.",
-            t.to_string(),
-        )
-        .into())
+        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
     }
 }
 
