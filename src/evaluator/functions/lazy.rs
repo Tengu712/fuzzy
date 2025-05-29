@@ -1,23 +1,18 @@
-use super::{types::TypeId, variable, *};
+use super::*;
 
-pub fn insert_lazy_functions(maps: &mut FunctionMap) {
-    let map = maps
-        .get_mut(&TypeId::Lazy)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Lazy));
-
-    map.insert(
-        "@".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(eval_lazy_block),
-        },
-    );
-    map.insert(
-        ":".to_string(),
-        Function {
-            types: vec![TypeId::Array],
-            code: FunctionCode::Builtin(define_function),
-        },
+pub fn insert(fm: &mut FunctionMap) {
+    fm.insert_all(
+        &TypeId::Lazy,
+        vec![
+            (
+                "@".to_string(),
+                (Vec::new(), FunctionCode::Builtin(eval_lazy_block)),
+            ),
+            (
+                ":".to_string(),
+                (vec![TypeId::Array], FunctionCode::Builtin(define_function)),
+            ),
+        ],
     );
 }
 
@@ -38,17 +33,10 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
     let types = convert_symbols_to_typeids(o)?;
     let t = TypeId::Function(types.clone());
 
-    if !env.fn_map.contains_key(&t) {
-        let mut n = HashMap::new();
-        n.insert(
-            "@".to_string(),
-            Function {
-                types,
-                code: FunctionCode::Builtin(call),
-            },
-        );
-        env.fn_map.insert(t.clone(), n);
-        variable::insert_variable_definition(&mut env.fn_map, &t);
+    if !env.fn_map.is_defined(&t, "@") {
+        env.fn_map
+            .insert(&t, "@".to_string(), (types, FunctionCode::Builtin(call)));
+        variable::insert(&mut env.fn_map, &t);
     }
 
     Ok(Value::Function((t, s)))

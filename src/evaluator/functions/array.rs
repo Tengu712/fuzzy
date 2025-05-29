@@ -1,79 +1,34 @@
-use super::{types::TypeId, *};
+use super::*;
 
-pub fn insert_array_functions(maps: &mut FunctionMap) {
-    let map = maps
-        .get_mut(&TypeId::Array)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Array));
-
-    map.insert(
-        "#".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(length),
-        },
-    );
-    map.insert(
-        "@".to_string(),
-        Function {
-            types: vec![TypeId::I32],
-            code: FunctionCode::Builtin(at),
-        },
-    );
-    map.insert(
-        "@@".to_string(),
-        Function {
-            types: vec![TypeId::I32, TypeId::Any],
-            code: FunctionCode::Builtin(replace),
-        },
-    );
-    map.insert(
-        "@<".to_string(),
-        Function {
-            types: vec![TypeId::I32, TypeId::Any],
-            code: FunctionCode::Builtin(insert),
-        },
-    );
-    map.insert(
-        "@<".to_string(),
-        Function {
-            types: vec![TypeId::I32, TypeId::Any],
-            code: FunctionCode::Builtin(insert),
-        },
-    );
-    map.insert(
-        "^".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(first),
-        },
-    );
-    map.insert(
-        "$".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(last),
-        },
-    );
-    map.insert(
-        "$>".to_string(),
-        Function {
-            types: vec![TypeId::Any],
-            code: FunctionCode::Builtin(push),
-        },
-    );
-    map.insert(
-        "@-".to_string(),
-        Function {
-            types: vec![TypeId::I32],
-            code: FunctionCode::Builtin(remove),
-        },
-    );
-    map.insert(
-        "$-".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(pop),
-        },
+pub fn insert(fm: &mut FunctionMap) {
+    fm.insert_all(
+        &TypeId::Array,
+        vec![
+            ("#".to_string(), (Vec::new(), FunctionCode::Builtin(length))),
+            (
+                "@".to_string(),
+                (vec![TypeId::I32], FunctionCode::Builtin(at)),
+            ),
+            (
+                "@@".to_string(),
+                (vec![TypeId::I32, TypeId::Any], FunctionCode::Builtin(repl)),
+            ),
+            (
+                "@<".to_string(),
+                (vec![TypeId::I32, TypeId::Any], FunctionCode::Builtin(ins)),
+            ),
+            ("^".to_string(), (Vec::new(), FunctionCode::Builtin(first))),
+            ("$".to_string(), (Vec::new(), FunctionCode::Builtin(last))),
+            (
+                "$>".to_string(),
+                (vec![TypeId::Any], FunctionCode::Builtin(push)),
+            ),
+            (
+                "@-".to_string(),
+                (vec![TypeId::I32], FunctionCode::Builtin(remove)),
+            ),
+            ("$-".to_string(), (Vec::new(), FunctionCode::Builtin(pop))),
+        ],
     );
 }
 
@@ -94,7 +49,7 @@ fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     Ok(n.cloned().unwrap_or(Value::Nil))
 }
 
-fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+fn repl(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = unwrap_subject(s, "@@");
     let o = unwrap_index(args.pop(), "@@");
     let Some(t) = args.pop() else {
@@ -105,7 +60,7 @@ fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value
     Ok(Value::Array(s))
 }
 
-fn insert(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = unwrap_subject(s, "@<");
     let o = unwrap_index(args.pop(), "@<");
     let Some(t) = args.pop() else {

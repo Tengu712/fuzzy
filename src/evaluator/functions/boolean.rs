@@ -1,44 +1,27 @@
-use super::{types::TypeId, *};
+use super::*;
 
-pub fn insert_bool_functions(maps: &mut FunctionMap) {
-    let map = maps
-        .get_mut(&TypeId::Bool)
-        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Bool));
-
-    map.insert(
-        "~".to_string(),
-        Function {
-            types: Vec::new(),
-            code: FunctionCode::Builtin(not),
-        },
-    );
-    map.insert(
-        ">>".to_string(),
-        Function {
-            types: vec![TypeId::Lazy],
-            code: FunctionCode::Builtin(on_then),
-        },
-    );
-    map.insert(
-        "!>".to_string(),
-        Function {
-            types: vec![TypeId::Lazy],
-            code: FunctionCode::Builtin(on_else),
-        },
-    );
-    map.insert(
-        "&&".to_string(),
-        Function {
-            types: vec![TypeId::Bool],
-            code: FunctionCode::Builtin(and),
-        },
-    );
-    map.insert(
-        "||".to_string(),
-        Function {
-            types: vec![TypeId::Bool],
-            code: FunctionCode::Builtin(or),
-        },
+pub fn insert(fm: &mut FunctionMap) {
+    fm.insert_all(
+        &TypeId::Bool,
+        vec![
+            ("~".to_string(), (Vec::new(), FunctionCode::Builtin(not))),
+            (
+                ">>".to_string(),
+                (vec![TypeId::Lazy], FunctionCode::Builtin(on_then)),
+            ),
+            (
+                "!>".to_string(),
+                (vec![TypeId::Lazy], FunctionCode::Builtin(on_else)),
+            ),
+            (
+                "&&".to_string(),
+                (vec![TypeId::Bool], FunctionCode::Builtin(and)),
+            ),
+            (
+                "||".to_string(),
+                (vec![TypeId::Bool], FunctionCode::Builtin(or)),
+            ),
+        ],
     );
 }
 

@@ -1,56 +1,47 @@
-use super::{types::TypeId, *};
+use super::*;
 
-pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &TypeId) {
-    let map = maps
-        .get_mut(ty)
-        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
-
-    map.insert(
-        "==".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(equal),
-        },
-    );
-    map.insert(
-        "!=".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(not_equal),
-        },
+pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
+    fm.insert_all(
+        ty,
+        vec![
+            (
+                "==".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(equal)),
+            ),
+            (
+                "!=".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(not_equal)),
+            ),
+        ],
     );
 
+    // NOTE: some types don't have inequality comparation.
+    //       If this language matures, we might consider supporting it
+    //       with algorithms similar to those used for JavaScript.
     if matches!(ty, TypeId::Array | TypeId::Lazy) {
         return;
     }
 
-    map.insert(
-        "<".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(l),
-        },
-    );
-    map.insert(
-        ">".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(g),
-        },
-    );
-    map.insert(
-        "<=".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(le),
-        },
-    );
-    map.insert(
-        ">=".to_string(),
-        Function {
-            types: vec![ty.clone()],
-            code: FunctionCode::Builtin(ge),
-        },
+    fm.insert_all(
+        ty,
+        vec![
+            (
+                "<".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(l)),
+            ),
+            (
+                ">".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(g)),
+            ),
+            (
+                "<=".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(le)),
+            ),
+            (
+                ">=".to_string(),
+                (vec![ty.clone()], FunctionCode::Builtin(ge)),
+            ),
+        ],
     );
 }
 
