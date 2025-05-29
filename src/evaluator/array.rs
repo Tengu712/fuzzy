@@ -1,9 +1,10 @@
-use super::*;
+use super::{types::TypeId, *};
 
 pub fn insert_array_functions(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut(&TypeId::Unit("[]".to_string()))
+        .get_mut(&TypeId::Array)
         .unwrap_or_else(|| panic!("function map for '[]' not found."));
+
     map.insert(
         "#".to_string(),
         Function {
@@ -14,37 +15,28 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
     map.insert(
         "@".to_string(),
         Function {
-            types: vec![TypeId::Unit("i32".to_string())],
+            types: vec![TypeId::I32],
             code: FunctionCode::Builtin(at),
         },
     );
     map.insert(
         "@@".to_string(),
         Function {
-            types: vec![
-                TypeId::Unit("i32".to_string()),
-                TypeId::Unit("_".to_string()),
-            ],
+            types: vec![TypeId::I32, TypeId::Any],
             code: FunctionCode::Builtin(replace),
         },
     );
     map.insert(
         "@<".to_string(),
         Function {
-            types: vec![
-                TypeId::Unit("i32".to_string()),
-                TypeId::Unit("_".to_string()),
-            ],
+            types: vec![TypeId::I32, TypeId::Any],
             code: FunctionCode::Builtin(insert),
         },
     );
     map.insert(
         "@<".to_string(),
         Function {
-            types: vec![
-                TypeId::Unit("i32".to_string()),
-                TypeId::Unit("_".to_string()),
-            ],
+            types: vec![TypeId::I32, TypeId::Any],
             code: FunctionCode::Builtin(insert),
         },
     );
@@ -65,14 +57,14 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
     map.insert(
         "$>".to_string(),
         Function {
-            types: vec![TypeId::Unit("_".to_string())],
+            types: vec![TypeId::Any],
             code: FunctionCode::Builtin(push),
         },
     );
     map.insert(
         "@-".to_string(),
         Function {
-            types: vec![TypeId::Unit("i32".to_string())],
+            types: vec![TypeId::I32],
             code: FunctionCode::Builtin(remove),
         },
     );
@@ -106,7 +98,7 @@ fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value
     let mut s = unwrap_subject(s, "@@");
     let o = unwrap_index(args.pop(), "@@");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '[]:@@'.");
+        panic!("type missmatched on '{}:@@'.", TypeId::Array.to_string());
     };
     let i = convert_index(o, s.len())?;
     s[i] = t;
@@ -117,7 +109,7 @@ fn insert(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value>
     let mut s = unwrap_subject(s, "@<");
     let o = unwrap_index(args.pop(), "@<");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '[]:@<'.");
+        panic!("type missmatched on '{}:@<'.", TypeId::Array.to_string());
     };
     let i = convert_index(o, s.len())?;
     s.insert(i, t);
@@ -137,7 +129,7 @@ fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = unwrap_subject(s, "$>");
     let Some(t) = args.pop() else {
-        panic!("type missmatched on '[]:$>'.");
+        panic!("type missmatched on '{}:$>'.", TypeId::Array.to_string());
     };
     s.push(t);
     Ok(Value::Array(s))
@@ -161,7 +153,10 @@ fn unwrap_subject(s: Value, name: &str) -> Vec<Value> {
     if let Value::Array(s) = s {
         s
     } else {
-        panic!("type missmatched on '[]:{name}'.");
+        panic!(
+            "type missmatched on '{}:{name}'.",
+            TypeId::Array.to_string()
+        );
     }
 }
 
@@ -169,7 +164,10 @@ fn unwrap_index(o: Option<Value>, name: &str) -> i32 {
     if let Some(Value::I32(o)) = o {
         o
     } else {
-        panic!("type missmatched on '[]:{name}'.");
+        panic!(
+            "type missmatched on '{}:{name}'.",
+            TypeId::Array.to_string()
+        );
     }
 }
 

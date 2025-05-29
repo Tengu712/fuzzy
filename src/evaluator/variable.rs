@@ -1,20 +1,21 @@
-use super::*;
+use super::{types::TypeId, *};
 
-pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &str) {
+pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &TypeId) {
     let map = maps
-        .get_mut(&TypeId::Unit(ty.to_string()))
-        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
+        .get_mut(ty)
+        .unwrap_or_else(|| panic!("function map for '{}' not found.", ty.to_string()));
+
     map.insert(
         "->".to_string(),
         Function {
-            types: vec![TypeId::Unit("symbol".to_string())],
+            types: vec![TypeId::Symbol],
             code: FunctionCode::Builtin(define_mutable),
         },
     );
     map.insert(
         "=>".to_string(),
         Function {
-            types: vec![TypeId::Unit("symbol".to_string())],
+            types: vec![TypeId::Symbol],
             code: FunctionCode::Builtin(define_immutable),
         },
     );
@@ -26,7 +27,7 @@ macro_rules! define_variable_definition {
             let Some(Value::Symbol(o)) = args.pop() else {
                 panic!(
                     "type missmatched on '{}:{}'.",
-                    s.get_typeid().format(),
+                    s.get_typeid().to_string(),
                     $name
                 );
             };

@@ -1,12 +1,14 @@
-use super::*;
+use super::{types::TypeId, *};
 
-pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
-    if ty == "{}" {
+pub fn insert_print(maps: &mut FunctionMap, ty: &TypeId) {
+    if matches!(ty, TypeId::Lazy) {
         return;
     }
+
     let map = maps
-        .get_mut(&TypeId::Unit(ty.to_string()))
-        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
+        .get_mut(ty)
+        .unwrap_or_else(|| panic!("function map for '{}' not found.", ty.to_string()));
+
     map.insert(
         "!".to_string(),
         Function {
