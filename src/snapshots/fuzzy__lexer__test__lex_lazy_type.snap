@@ -1,0 +1,9 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- LBracket
+- Symbol: i32
+- Symbol: "{}"
+- Symbol: "{}"
+- RBracket
