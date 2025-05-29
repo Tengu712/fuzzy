@@ -49,7 +49,7 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
             Value::Nil => (),
             Value::Symbol(n) => v.push(TypeId::from(&n)?),
             Value::Array(n) => v.push(TypeId::Function(convert_symbols_to_typeids(n)?)),
-            _ => return Err(format!("error: the element of argument list must be symbol or array of symbols but passed '{}'.", n.get_typeid()).into()),
+            _ => return Err(format!("error: the element of argument list must be symbol or array of symbols but passed '{}'.", n.typeid()).into()),
         }
     }
     Ok(v)
@@ -57,7 +57,7 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
 
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let Value::Function((_, mut s)) = s else {
-        panic!("type missmatched on '{}:@'.", s.get_typeid());
+        panic!("type missmatched on '{}:@'.", s.typeid());
     };
     args.reverse();
     let result = eval_block(env, &mut s, Some(args))?

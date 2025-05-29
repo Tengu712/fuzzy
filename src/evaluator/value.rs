@@ -86,7 +86,7 @@ impl Value {
         }
     }
 
-    pub fn get_typeid(&self) -> TypeId {
+    pub fn typeid(&self) -> TypeId {
         match self {
             Self::Nil => TypeId::Bool,
             Self::Top => TypeId::Bool,
@@ -124,7 +124,7 @@ impl Value {
                 format!("{n} {a} {s}")
             }
             Self::Label(_) => panic!("tried to format label."),
-            _ => format!("{self} ({})", self.get_typeid()),
+            _ => format!("{self} ({})", self.typeid()),
         }
     }
 }

@@ -103,7 +103,7 @@ fn pop_object(s: &Value, mut args: Vec<Value>, name: &str) -> Value {
     if let Some(o) = args.pop() {
         o
     } else {
-        panic!("type missmatched on '{}:{name}'.", s.get_typeid());
+        panic!("type missmatched on '{}:{name}'.", s.typeid());
     }
 }
 
@@ -138,8 +138,8 @@ macro_rules! define_inequality_compare {
                 }
                 _ => panic!(
                     "tried to compare {} and {}",
-                    self.get_typeid(),
-                    other.get_typeid(),
+                    self.typeid(),
+                    other.typeid(),
                 ),
             }
         }
@@ -169,17 +169,13 @@ impl Value {
                 a.len() == b.len()
                     && a.iter()
                         .zip(b.iter())
-                        .all(|(x, y)| x.get_typeid() == y.get_typeid() && x.equal(y))
+                        .all(|(x, y)| x.typeid() == y.typeid() && x.equal(y))
             }
             (Self::Lazy(a), Self::Lazy(b)) => a == b,
             (Self::Label(_), _) | (_, Self::Label(_)) => {
                 panic!("tried to compare label.");
             }
-            _ => panic!(
-                "tried to compare {} and {}",
-                self.get_typeid(),
-                other.get_typeid(),
-            ),
+            _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
         }
     }
 

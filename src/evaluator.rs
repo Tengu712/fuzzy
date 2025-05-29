@@ -184,7 +184,7 @@ fn eval_sentence_inner(
     };
 
     // get verb function
-    let t = s.get_typeid();
+    let t = s.typeid();
     if !env.fn_map.is_defined(&t, vn) {
         env.set_evaluated(v);
         return Ok(s);
@@ -236,7 +236,7 @@ fn check_argument_types(
     } else if ts
         .iter()
         .zip(args.iter())
-        .all(|(n, m)| n == &m.get_typeid() || n == &types::TypeId::Any)
+        .all(|(n, m)| n == &m.typeid() || n == &types::TypeId::Any)
     {
         Ok(true)
     } else {
@@ -249,7 +249,7 @@ fn check_argument_types(
         let instead = args
             .iter()
             .enumerate()
-            .map(|(i, n)| format!("({}) {}", i + 1, n.get_typeid()))
+            .map(|(i, n)| format!("({}) {}", i + 1, n.typeid()))
             .collect::<Vec<_>>()
             .join(", ");
         Err(

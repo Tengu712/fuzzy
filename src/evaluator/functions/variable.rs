@@ -23,7 +23,7 @@ macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
             let Some(Value::Symbol(o)) = args.pop() else {
-                panic!("type missmatched on '{}:{}'.", s.get_typeid(), $name);
+                panic!("type missmatched on '{}:{}'.", s.typeid(), $name);
             };
             if o == "T" {
                 return Err(format!("error: cannot redefine 'T'.").into());
