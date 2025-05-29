@@ -12,22 +12,12 @@ pub struct Variable {
 
 pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 
+#[derive(Default)]
 pub struct Environment {
     pub fn_map: functions::FunctionMap,
     pub vr_map: VariableMapStack,
     pub args: Vec<Vec<value::Value>>,
     pub evaluated: Vec<Option<value::Value>>,
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Self {
-            fn_map: functions::FunctionMap::default(),
-            vr_map: Vec::new(),
-            args: Vec::new(),
-            evaluated: Vec::new(),
-        }
-    }
 }
 
 impl Environment {
