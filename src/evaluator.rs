@@ -9,7 +9,7 @@ mod types;
 mod value;
 mod variable;
 
-pub use value::Value;
+use value::Value;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
@@ -100,6 +100,12 @@ impl Environment {
             *n = Some(v);
         }
     }
+}
+
+pub fn parse_command_line_args(args: Vec<String>) -> Vec<Value> {
+    args.into_iter()
+        .map(|n| Value::String(n))
+        .collect::<Vec<_>>()
 }
 
 /// A function to evaluate a block.
