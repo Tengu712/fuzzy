@@ -102,10 +102,9 @@ impl Environment {
     }
 }
 
+/// A function to convert command line arguments to Fuzzy values.
 pub fn parse_command_line_args(args: Vec<String>) -> Vec<Value> {
-    args.into_iter()
-        .map(|n| Value::String(n))
-        .collect::<Vec<_>>()
+    args.into_iter().map(Value::String).collect::<Vec<_>>()
 }
 
 /// A function to evaluate a block.
