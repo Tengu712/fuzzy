@@ -153,6 +153,15 @@ impl Environment {
         }
     }
 
+    fn get_argument(&self, i: usize) -> Option<Value> {
+        // OPTIMIZE: remove clone.
+        self.args
+            .last()
+            .expect("argument stack is empty.")
+            .get(i)
+            .cloned()
+    }
+
     fn take_evaluated(&mut self) -> Option<Value> {
         self.evaluated.last_mut().and_then(|n| n.take())
     }
@@ -336,7 +345,23 @@ fn check_argument_types(
     {
         Ok(true)
     } else {
-        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
+        let expected = f
+            .types
+            .iter()
+            .enumerate()
+            .map(|(i, n)| format!("({i}) {n}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let instead = args
+            .iter()
+            .enumerate()
+            .map(|(i, n)| format!("({i}) {}", n.get_typeid()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(
+            format!("error: '{v}' on '{t}' expected arguments {expected}, but passed {instead}.")
+                .into(),
+        )
     }
 }
 
@@ -375,6 +400,9 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             Ok(Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
+        Some(Token::Argument(n)) => env
+            .get_argument(n)
+            .ok_or(format!("error: argument at {n} not found.").into()),
         Some(n) => Ok(Value::from(n)),
     }
 }

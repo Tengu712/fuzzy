@@ -77,6 +77,14 @@ fn test_conditional_branch() {
 }
 
 #[test]
+fn test_function() {
+    run(
+        "tests/scripts/function.fuz",
+        "Hello, world!\n25\n300\n144\n",
+    );
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

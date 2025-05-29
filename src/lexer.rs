@@ -28,7 +28,7 @@ pub enum Token {
     F64(f64),
     String(String),
     Symbol(String),
-    Argument(u32),
+    Argument(usize),
     Label(String),
 }
 impl Token {
@@ -134,7 +134,7 @@ fn parse_number(s: &str) -> Option<Token> {
 
 fn parse_argument(s: &str) -> Option<Token> {
     s.strip_prefix('#')?
-        .parse::<u32>()
+        .parse::<usize>()
         .ok()
         .map(Token::Argument)
 }
@@ -264,7 +264,7 @@ mod test {
 
     #[test]
     fn test_parse_argument() {
-        let n = Faker.fake::<u32>();
+        let n = Faker.fake::<usize>();
         assert_eq!(parse_argument(&format!("#{n}")), Some(Token::Argument(n)));
     }
 }
