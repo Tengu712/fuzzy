@@ -2,7 +2,7 @@ use super::*;
 
 pub fn insert_bool_functions(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut("bool")
+        .get_mut(&TypeId::Unit("bool".to_string()))
         .unwrap_or_else(|| panic!("function map for 'bool' not found."));
     map.insert(
         "~".to_string(),
@@ -14,28 +14,28 @@ pub fn insert_bool_functions(maps: &mut FunctionMap) {
     map.insert(
         ">>".to_string(),
         Function {
-            types: vec!["{}".to_string()],
+            types: vec![TypeId::Unit("{}".to_string())],
             code: FunctionCode::Builtin(on_then),
         },
     );
     map.insert(
         "!>".to_string(),
         Function {
-            types: vec!["{}".to_string()],
+            types: vec![TypeId::Unit("{}".to_string())],
             code: FunctionCode::Builtin(on_else),
         },
     );
     map.insert(
         "&&".to_string(),
         Function {
-            types: vec!["bool".to_string()],
+            types: vec![TypeId::Unit("bool".to_string())],
             code: FunctionCode::Builtin(and),
         },
     );
     map.insert(
         "||".to_string(),
         Function {
-            types: vec!["bool".to_string()],
+            types: vec![TypeId::Unit("bool".to_string())],
             code: FunctionCode::Builtin(or),
         },
     );

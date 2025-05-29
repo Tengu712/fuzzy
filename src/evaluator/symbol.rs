@@ -2,7 +2,7 @@ use super::*;
 
 pub fn insert_symbol_value(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut("symbol")
+        .get_mut(&TypeId::Unit("symbol".to_string()))
         .unwrap_or_else(|| panic!("function map for 'symbol' not found."));
     map.insert(
         "$".to_string(),

@@ -1,20 +1,21 @@
 use super::*;
 
 pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &str) {
+    let tid = TypeId::Unit(ty.to_string());
     let map = maps
-        .get_mut(ty)
+        .get_mut(&tid)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
     map.insert(
         "==".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(equal),
         },
     );
     map.insert(
         "!=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(not_equal),
         },
     );
@@ -26,28 +27,28 @@ pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &str) {
     map.insert(
         "<".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(l),
         },
     );
     map.insert(
         ">".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(g),
         },
     );
     map.insert(
         "<=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(le),
         },
     );
     map.insert(
         ">=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![tid.clone()],
             code: FunctionCode::Builtin(ge),
         },
     );
@@ -111,7 +112,7 @@ fn pop_object(s: &Value, mut args: Vec<Value>, name: &str) -> Value {
     if let Some(o) = args.pop() {
         o
     } else {
-        panic!("type missmatched on '{}:{name}'.", s.get_typeid());
+        panic!("type missmatched on '{}:{name}'.", s.get_typeid().format());
     }
 }
 
@@ -146,8 +147,8 @@ macro_rules! define_inequality_compare {
                 }
                 _ => panic!(
                     "tried to compare {} and {}",
-                    self.get_typeid(),
-                    other.get_typeid()
+                    self.get_typeid().format(),
+                    other.get_typeid().format(),
                 ),
             }
         }
@@ -185,8 +186,8 @@ impl Value {
             }
             _ => panic!(
                 "tried to compare {} and {}",
-                self.get_typeid(),
-                other.get_typeid()
+                self.get_typeid().format(),
+                other.get_typeid().format(),
             ),
         }
     }

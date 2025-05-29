@@ -5,7 +5,7 @@ pub fn insert_print(maps: &mut FunctionMap, ty: &str) {
         return;
     }
     let map = maps
-        .get_mut(ty)
+        .get_mut(&TypeId::Unit(ty.to_string()))
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
     map.insert(
         "!".to_string(),

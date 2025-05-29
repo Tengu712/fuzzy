@@ -10,6 +10,31 @@ mod variable;
 use crate::{lexer::*, *};
 use std::collections::HashMap;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TypeId {
+    Unit(String),
+    Args(Vec<TypeId>),
+}
+
+impl TypeId {
+    fn format(&self) -> String {
+        match self {
+            Self::Unit(n) => n.clone(),
+            Self::Args(n) => {
+                let mut s = "[".to_string();
+                for (i, t) in n.iter().enumerate() {
+                    s.push_str(&t.format());
+                    if i < n.len() - 1 {
+                        s.push(' ');
+                    }
+                }
+                s.push(']');
+                s
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Nil,
@@ -56,26 +81,26 @@ impl Value {
         }
     }
 
-    fn get_typeid(&self) -> String {
+    fn get_typeid(&self) -> TypeId {
         match self {
-            Self::Nil => "bool".to_string(),
-            Self::Top => "bool".to_string(),
-            Self::I8(_) => "i8".to_string(),
-            Self::U8(_) => "u8".to_string(),
-            Self::I16(_) => "i16".to_string(),
-            Self::U16(_) => "u16".to_string(),
-            Self::I32(_) => "i32".to_string(),
-            Self::U32(_) => "u32".to_string(),
-            Self::I64(_) => "i64".to_string(),
-            Self::U64(_) => "u64".to_string(),
-            Self::I128(_) => "i128".to_string(),
-            Self::U128(_) => "u128".to_string(),
-            Self::F32(_) => "f32".to_string(),
-            Self::F64(_) => "f64".to_string(),
-            Self::String(_) => "string".to_string(),
-            Self::Symbol(_) => "symbol".to_string(),
-            Self::Array(_) => "[]".to_string(),
-            Self::Lazy(_) => "{}".to_string(),
+            Self::Nil => TypeId::Unit("bool".to_string()),
+            Self::Top => TypeId::Unit("bool".to_string()),
+            Self::I8(_) => TypeId::Unit("i8".to_string()),
+            Self::U8(_) => TypeId::Unit("u8".to_string()),
+            Self::I16(_) => TypeId::Unit("i16".to_string()),
+            Self::U16(_) => TypeId::Unit("u16".to_string()),
+            Self::I32(_) => TypeId::Unit("i32".to_string()),
+            Self::U32(_) => TypeId::Unit("u32".to_string()),
+            Self::I64(_) => TypeId::Unit("i64".to_string()),
+            Self::U64(_) => TypeId::Unit("u64".to_string()),
+            Self::I128(_) => TypeId::Unit("i128".to_string()),
+            Self::U128(_) => TypeId::Unit("u128".to_string()),
+            Self::F32(_) => TypeId::Unit("f32".to_string()),
+            Self::F64(_) => TypeId::Unit("f64".to_string()),
+            Self::String(_) => TypeId::Unit("string".to_string()),
+            Self::Symbol(_) => TypeId::Unit("symbol".to_string()),
+            Self::Array(_) => TypeId::Unit("[]".to_string()),
+            Self::Lazy(_) => TypeId::Unit("{}".to_string()),
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
@@ -98,11 +123,11 @@ pub enum FunctionCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    pub types: Vec<String>,
+    pub types: Vec<TypeId>,
     pub code: FunctionCode,
 }
 
-pub type FunctionMap = HashMap<String, HashMap<String, Function>>;
+pub type FunctionMap = HashMap<TypeId, HashMap<String, Function>>;
 pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 
 pub struct Environment {
@@ -115,7 +140,7 @@ impl Default for Environment {
     fn default() -> Self {
         let mut fn_map = HashMap::new();
         for n in ALL_TYPES {
-            fn_map.insert(n.to_string(), HashMap::new());
+            fn_map.insert(TypeId::Unit(n.to_string()), HashMap::new());
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
             cmp::insert_compare_functions(&mut fn_map, n);
@@ -270,7 +295,11 @@ fn eval_sentence_inner(
             continue;
         }
         if is_end_sentence(tokens) {
-            return Err(format!("error: too few arguments passed to '{t}' on '{vn}'.").into());
+            return Err(format!(
+                "error: too few arguments passed to '{vn}' on '{}'.",
+                t.format()
+            )
+            .into());
         }
         let arg = eval_sentence_inner(env, tokens, None)?;
         let arg = expand_label(env, arg)?;
@@ -296,23 +325,27 @@ fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     }
 }
 
-fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+fn check_argument_types(env: &Environment, t: &TypeId, v: &str, args: &[Value]) -> RResult<bool> {
     let f = env
         .fn_map
         .get(t)
         .and_then(|n| n.get(v))
-        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{t}'"));
+        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{}'", t.format()));
     if f.types.len() > args.len() {
         Ok(false)
     } else if f
         .types
         .iter()
         .zip(args.iter())
-        .all(|(n, m)| n == &m.get_typeid() || n == "_")
+        .all(|(n, m)| n == &m.get_typeid() || n == &TypeId::Unit("_".to_string()))
     {
         Ok(true)
     } else {
-        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
+        Err(format!(
+            "error: type missmatched arguments passed to '{v}' on '{}'.",
+            t.format()
+        )
+        .into())
     }
 }
 

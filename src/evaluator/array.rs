@@ -2,7 +2,7 @@ use super::*;
 
 pub fn insert_array_functions(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut("[]")
+        .get_mut(&TypeId::Unit("[]".to_string()))
         .unwrap_or_else(|| panic!("function map for '[]' not found."));
     map.insert(
         "#".to_string(),
@@ -14,28 +14,37 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
     map.insert(
         "@".to_string(),
         Function {
-            types: vec!["i32".to_string()],
+            types: vec![TypeId::Unit("i32".to_string())],
             code: FunctionCode::Builtin(at),
         },
     );
     map.insert(
         "@@".to_string(),
         Function {
-            types: vec!["i32".to_string(), "_".to_string()],
+            types: vec![
+                TypeId::Unit("i32".to_string()),
+                TypeId::Unit("_".to_string()),
+            ],
             code: FunctionCode::Builtin(replace),
         },
     );
     map.insert(
         "@<".to_string(),
         Function {
-            types: vec!["i32".to_string(), "_".to_string()],
+            types: vec![
+                TypeId::Unit("i32".to_string()),
+                TypeId::Unit("_".to_string()),
+            ],
             code: FunctionCode::Builtin(insert),
         },
     );
     map.insert(
         "@<".to_string(),
         Function {
-            types: vec!["i32".to_string(), "_".to_string()],
+            types: vec![
+                TypeId::Unit("i32".to_string()),
+                TypeId::Unit("_".to_string()),
+            ],
             code: FunctionCode::Builtin(insert),
         },
     );
@@ -56,14 +65,14 @@ pub fn insert_array_functions(maps: &mut FunctionMap) {
     map.insert(
         "$>".to_string(),
         Function {
-            types: vec!["_".to_string()],
+            types: vec![TypeId::Unit("_".to_string())],
             code: FunctionCode::Builtin(push),
         },
     );
     map.insert(
         "@-".to_string(),
         Function {
-            types: vec!["i32".to_string()],
+            types: vec![TypeId::Unit("i32".to_string())],
             code: FunctionCode::Builtin(remove),
         },
     );

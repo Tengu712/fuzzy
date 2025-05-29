@@ -20,12 +20,12 @@ macro_rules! for_all_numeric_types {
 macro_rules! insert_numeric_function {
     ($maps: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
         $maps
-            .get_mut(stringify!($ty))
+            .get_mut(&TypeId::Unit(stringify!($ty).to_string()))
             .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
             .insert(
                 stringify!($op).to_string(),
                 Function {
-                    types: vec![stringify!($ty).to_string()],
+                    types: vec![TypeId::Unit(stringify!($ty).to_string())],
                     code: FunctionCode::Builtin(paste::item! {[<$fn $ty>]}),
                 },
             );
@@ -35,12 +35,12 @@ macro_rules! insert_numeric_function {
 macro_rules! insert_cast {
     ($maps: expr, $ty: ident, $_: ident) => {
         $maps
-            .get_mut(stringify!($ty))
+            .get_mut(&TypeId::Unit(stringify!($ty).to_string()))
             .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
             .insert(
                 ":".to_string(),
                 Function {
-                    types: vec!["symbol".to_string()],
+                    types: vec![TypeId::Unit("symbol".to_string())],
                     code: FunctionCode::Builtin(paste::item! {[<cast $ty>]}),
                 },
             );

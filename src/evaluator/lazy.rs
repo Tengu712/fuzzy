@@ -2,7 +2,7 @@ use super::*;
 
 pub fn insert_lazy_functions(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut("{}")
+        .get_mut(&TypeId::Unit("{}".to_string()))
         .unwrap_or_else(|| panic!("function map for 'lazy' not found."));
     map.insert(
         "@".to_string(),
