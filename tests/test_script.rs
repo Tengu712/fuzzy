@@ -9,6 +9,15 @@ fn run(path: &'static str, output: &'static str) {
         .stdout(output);
 }
 
+fn run_with(args: &[&str], output: &'static str) {
+    Command::cargo_bin(env!("CARGO_PKG_NAME"))
+        .unwrap()
+        .args(args)
+        .assert()
+        .success()
+        .stdout(output);
+}
+
 fn run_wrong(path: &'static str) {
     Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .unwrap()
@@ -73,6 +82,27 @@ fn test_conditional_branch() {
     run(
         "tests/scripts/conditional-branch.fuz",
         "5 > 3\nfalse\nbar baz\nok\nok\nab\n",
+    );
+}
+
+#[test]
+fn test_function() {
+    run(
+        "tests/scripts/function.fuz",
+        "Hello, world!\n25\n300\n144\n",
+    );
+}
+
+#[test]
+fn test_command_line_argument() {
+    run_with(
+        &[
+            "tests/scripts/command-line-argument.fuz",
+            "Hello, ",
+            "world!",
+            "In a block.",
+        ],
+        "Hello, world!\nIn a block.\n",
     );
 }
 

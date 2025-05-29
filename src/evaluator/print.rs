@@ -2,10 +2,6 @@ use super::{types::TypeId, *};
 use std::fmt::{Display, Result};
 
 pub fn insert_print(maps: &mut FunctionMap, ty: &TypeId) {
-    if matches!(ty, TypeId::Lazy) {
-        return;
-    }
-
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
@@ -67,6 +63,7 @@ impl Display for Value {
                 write!(f, "{s}")
             }
             Self::Lazy(_) => write!(f, "{{}}"),
+            Self::Function(_) => write!(f, "{{}}"),
             Self::Label(_) => panic!("tried to format label."),
         }
     }

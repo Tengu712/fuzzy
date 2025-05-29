@@ -31,6 +31,7 @@ pub enum Value {
     Symbol(String),
     Array(Vec<Value>),
     Lazy(Vec<Token>),
+    Function((types::TypeId, Vec<Token>)),
     Label(String),
 }
 
@@ -78,6 +79,7 @@ impl Value {
             Self::Symbol(_) => TypeId::Symbol,
             Self::Array(_) => TypeId::Array,
             Self::Lazy(_) => TypeId::Lazy,
+            Self::Function((n, _)) => n.clone(),
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
@@ -105,6 +107,7 @@ pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 pub struct Environment {
     pub fn_map: FunctionMap,
     pub vr_map: VariableMapStack,
+    pub args: Vec<Vec<Value>>,
     pub evaluated: Vec<Option<Value>>,
 }
 
@@ -126,6 +129,7 @@ impl Default for Environment {
         Self {
             fn_map,
             vr_map: Vec::new(),
+            args: Vec::new(),
             evaluated: Vec::new(),
         }
     }
@@ -149,6 +153,15 @@ impl Environment {
         }
     }
 
+    fn get_argument(&self, i: usize) -> Option<Value> {
+        // OPTIMIZE: remove clone.
+        self.args
+            .last()
+            .expect("argument stack is empty.")
+            .get(i)
+            .cloned()
+    }
+
     fn take_evaluated(&mut self) -> Option<Value> {
         self.evaluated.last_mut().and_then(|n| n.take())
     }
@@ -164,18 +177,36 @@ impl Environment {
 ///
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
+/// * `args` - The list of arguments passed to the block.
 ///
 /// Evaluates all statements and returns their results.
 /// If the last statement ends with `.`, `Value::Nil` is appended to the results.
 ///
 /// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
-pub fn eval_block(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+///
+/// NOTE: Only top-level and lazy blocks should be passed `Some` for `args`.
+///       In other words, evaluating an immediate block doesn't affect the argument list's stack.
+pub fn eval_block(
+    env: &mut Environment,
+    tokens: &mut Vec<Token>,
+    args: Option<Vec<Value>>,
+) -> RResult<Vec<Value>> {
+    let args_is_some = args.is_some();
+    if args_is_some {
+        env.args.push(args.unwrap());
+    };
     env.vr_map.push(HashMap::new());
     env.evaluated.push(None);
-    let n = eval_block_directly(env, tokens);
+
+    let results = eval_block_directly(env, tokens);
+
+    if args_is_some {
+        env.args.pop();
+    }
     env.vr_map.pop();
     env.evaluated.pop();
-    n
+
+    results
 }
 
 /// A function to evaluate a block without any environment setup.
@@ -314,7 +345,23 @@ fn check_argument_types(
     {
         Ok(true)
     } else {
-        Err(format!("error: type missmatched arguments passed to '{v}' on '{t}'.").into())
+        let expected = f
+            .types
+            .iter()
+            .enumerate()
+            .map(|(i, n)| format!("({}) {n}", i + 1))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let instead = args
+            .iter()
+            .enumerate()
+            .map(|(i, n)| format!("({}) {}", i + 1, n.get_typeid()))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(
+            format!("error: '{v}' on '{t}' expected arguments {expected}, but passed {instead}.")
+                .into(),
+        )
     }
 }
 
@@ -331,7 +378,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(mut n) = extract_brackets_content(tokens, Token::LParen, Token::RParen) else {
                 return Err("error: unmatched '(' found.".into());
             };
-            let result = eval_block(env, &mut n)?
+            let result = eval_block(env, &mut n, None)?
                 .pop()
                 .expect("evaluating block result is empty.");
             Ok(result)
@@ -349,10 +396,13 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             else {
                 return Err("error: unmatched '[' found.".into());
             };
-            let results = eval_block(env, &mut n)?;
+            let results = eval_block(env, &mut n, None)?;
             Ok(Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
+        Some(Token::Argument(n)) => env
+            .get_argument(n)
+            .ok_or(format!("error: argument at {n} not found.").into()),
         Some(n) => Ok(Value::from(n)),
     }
 }

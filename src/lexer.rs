@@ -28,6 +28,7 @@ pub enum Token {
     F64(f64),
     String(String),
     Symbol(String),
+    Argument(usize),
     Label(String),
 }
 impl Token {
@@ -56,6 +57,8 @@ impl Token {
             Self::String(s[1..s.len() - 1].to_string())
         } else if s.starts_with("'") {
             Self::Symbol(s[1..s.len()].to_string())
+        } else if let Some(n) = parse_argument(s) {
+            n
         } else {
             Self::Label(s.to_string())
         }
@@ -129,6 +132,13 @@ fn parse_number(s: &str) -> Option<Token> {
     }
 }
 
+fn parse_argument(s: &str) -> Option<Token> {
+    s.strip_prefix('#')?
+        .parse::<usize>()
+        .ok()
+        .map(Token::Argument)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -179,6 +189,12 @@ mod test {
     #[test]
     fn test_top() {
         let tokens = lex("foo B T 'T").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_argument() {
+        let tokens = lex("foo 12 #012 T").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
@@ -239,5 +255,16 @@ mod test {
     fn test_parse_f32() {
         let n = Faker.fake::<f32>();
         assert_eq!(parse_number(&format!("{n}f32")), Some(Token::F32(n)));
+    }
+
+    #[test]
+    fn test_hash_and_not_number_not_argument() {
+        assert_eq!(parse_argument("#foo"), None);
+    }
+
+    #[test]
+    fn test_parse_argument() {
+        let n = Faker.fake::<usize>();
+        assert_eq!(parse_argument(&format!("#{n}")), Some(Token::Argument(n)));
     }
 }

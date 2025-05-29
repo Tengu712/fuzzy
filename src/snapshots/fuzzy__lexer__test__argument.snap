@@ -1,0 +1,8 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- Label: foo
+- I32: 12
+- Argument: 12
+- Top

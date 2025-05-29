@@ -14,12 +14,11 @@ fn main() {
 
     if args.is_empty() {
         repl::run();
+        return;
     }
 
-    for n in args {
-        if let Err(e) = script::run(n) {
-            eprintln!("{e}");
-            process::exit(1);
-        }
+    if let Err(e) = script::run(&args[0], &args[1..]) {
+        eprintln!("{e}");
+        process::exit(1);
     }
 }
