@@ -53,7 +53,7 @@ fn not(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn on_then(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     if unwrap_subject(s.clone(), ">>") {
         let mut o = unwrap_lazy_block(args.pop(), ">>");
-        let _ = eval_block(env, &mut o)?;
+        let _ = eval_block(env, &mut o, Some(Vec::new()))?;
     }
     Ok(s)
 }
@@ -61,7 +61,7 @@ fn on_then(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Val
 fn on_else(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     if !unwrap_subject(s.clone(), "!>") {
         let mut o = unwrap_lazy_block(args.pop(), "!>");
-        let _ = eval_block(env, &mut o)?;
+        let _ = eval_block(env, &mut o, Some(Vec::new()))?;
     }
     Ok(s)
 }

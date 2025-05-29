@@ -11,6 +11,7 @@ use std::{
 pub fn run() {
     let mut env = Environment::default();
     env.vr_map.push(HashMap::new());
+    env.args.push(Vec::new());
     env.evaluated.push(None);
     loop {
         match run_inner(&mut env) {
@@ -88,6 +89,7 @@ impl Value {
                 s
             }
             Self::Lazy(_) => "{}".to_string(),
+            Self::Function(_) => panic!("unimplemented."),
             Self::Label(_) => panic!("tried to format label."),
         }
     }

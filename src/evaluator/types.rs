@@ -21,6 +21,7 @@ pub enum TypeId {
     Symbol,
     Array,
     Lazy,
+    Function(Vec<TypeId>),
 }
 
 impl Display for TypeId {
@@ -44,6 +45,17 @@ impl Display for TypeId {
             Self::Symbol => write!(f, "symbol"),
             Self::Array => write!(f, "[]"),
             Self::Lazy => write!(f, "{{}}"),
+            Self::Function(n) => {
+                let mut s = "@[".to_string();
+                for (i, t) in n.iter().enumerate() {
+                    s.push_str(&t.to_string());
+                    if i < n.len() - 1 {
+                        s.push(' ');
+                    }
+                }
+                s.push(']');
+                write!(f, "{s}")
+            }
         }
     }
 }
