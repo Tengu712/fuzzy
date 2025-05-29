@@ -9,10 +9,10 @@ fn run(path: &'static str, output: &'static str) {
         .stdout(output);
 }
 
-fn run_with(commands: &[&str], output: &'static str) {
+fn run_with(args: &[&str], output: &'static str) {
     Command::cargo_bin(env!("CARGO_PKG_NAME"))
         .unwrap()
-        .args(commands)
+        .args(args)
         .assert()
         .success()
         .stdout(output);
@@ -100,8 +100,9 @@ fn test_command_line_argument() {
             "tests/scripts/command-line-argument.fuz",
             "Hello, ",
             "world!",
+            "In a block.",
         ],
-        "Hello, world!\n",
+        "Hello, world!\nIn a block.\n",
     );
 }
 
