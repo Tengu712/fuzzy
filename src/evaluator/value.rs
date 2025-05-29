@@ -118,11 +118,10 @@ impl Value {
             Self::Array(_) => self.to_string(),
             Self::Lazy(_) => self.to_string(),
             Self::Symbol(n) if env.get_variable(n).is_some() => {
-                if env.get_variable(n).unwrap().mutable {
-                    format!("{n} <- {}", self.format_in_detail(env))
-                } else {
-                    format!("{n} <= {}", self.format_in_detail(env))
-                }
+                let v = env.get_variable(n).unwrap();
+                let s = v.value.format_in_detail(env);
+                let a = if v.mutable { "<-" } else { "<=" };
+                format!("{n} {a} {s}")
             }
             Self::Label(_) => panic!("tried to format label."),
             _ => format!("{self} ({})", self.get_typeid()),
