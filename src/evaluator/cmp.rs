@@ -112,7 +112,7 @@ fn pop_object(s: &Value, mut args: Vec<Value>, name: &str) -> Value {
     if let Some(o) = args.pop() {
         o
     } else {
-        panic!("type missmatched on '{}:{name}'.", s.get_typeid(),);
+        panic!("type missmatched on '{}:{name}'.", s.get_typeid());
     }
 }
 
