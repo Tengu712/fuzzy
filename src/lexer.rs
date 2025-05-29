@@ -84,10 +84,15 @@ fn split_trailing_signs(s: &str) -> Vec<&str> {
     if is_sign_str(s) {
         return vec![s];
     }
-    let pos = s
+    let spos = if s.starts_with("'[]") || s.starts_with("'{}") {
+        3
+    } else {
+        0
+    };
+    let pos = s[spos..]
         .rfind(|c: char| !is_sign_char(c))
-        .map(|i| i + 1)
-        .unwrap_or(0);
+        .map(|i| spos + i + 1)
+        .unwrap_or(spos);
     let mut v = Vec::new();
     v.push(&s[..pos]);
     for i in pos..s.len() {
@@ -195,6 +200,18 @@ mod test {
     #[test]
     fn test_argument() {
         let tokens = lex("foo 12 #012 T").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_lex_array_type() {
+        let tokens = lex("['i32 '[] '[]]").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_lex_lazy_type() {
+        let tokens = lex("['i32 '{} '{}]").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
