@@ -1,20 +1,21 @@
-use super::*;
+use super::{types::TypeId, *};
 
-pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &str) {
+pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &TypeId) {
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
+
     map.insert(
         "->".to_string(),
         Function {
-            types: vec!["symbol".to_string()],
+            types: vec![TypeId::Symbol],
             code: FunctionCode::Builtin(define_mutable),
         },
     );
     map.insert(
         "=>".to_string(),
         Function {
-            types: vec!["symbol".to_string()],
+            types: vec![TypeId::Symbol],
             code: FunctionCode::Builtin(define_immutable),
         },
     );

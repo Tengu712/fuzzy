@@ -5,6 +5,7 @@ mod lazy;
 mod numeric;
 mod print;
 mod symbol;
+mod types;
 mod variable;
 
 use crate::{lexer::*, *};
@@ -56,35 +57,31 @@ impl Value {
         }
     }
 
-    fn get_typeid(&self) -> String {
+    fn get_typeid(&self) -> types::TypeId {
+        use types::TypeId;
         match self {
-            Self::Nil => "bool".to_string(),
-            Self::Top => "bool".to_string(),
-            Self::I8(_) => "i8".to_string(),
-            Self::U8(_) => "u8".to_string(),
-            Self::I16(_) => "i16".to_string(),
-            Self::U16(_) => "u16".to_string(),
-            Self::I32(_) => "i32".to_string(),
-            Self::U32(_) => "u32".to_string(),
-            Self::I64(_) => "i64".to_string(),
-            Self::U64(_) => "u64".to_string(),
-            Self::I128(_) => "i128".to_string(),
-            Self::U128(_) => "u128".to_string(),
-            Self::F32(_) => "f32".to_string(),
-            Self::F64(_) => "f64".to_string(),
-            Self::String(_) => "string".to_string(),
-            Self::Symbol(_) => "symbol".to_string(),
-            Self::Array(_) => "[]".to_string(),
-            Self::Lazy(_) => "{}".to_string(),
+            Self::Nil => TypeId::Bool,
+            Self::Top => TypeId::Bool,
+            Self::I8(_) => TypeId::I8,
+            Self::U8(_) => TypeId::U8,
+            Self::I16(_) => TypeId::I16,
+            Self::U16(_) => TypeId::U16,
+            Self::I32(_) => TypeId::I32,
+            Self::U32(_) => TypeId::U32,
+            Self::I64(_) => TypeId::I64,
+            Self::U64(_) => TypeId::U64,
+            Self::I128(_) => TypeId::I128,
+            Self::U128(_) => TypeId::U128,
+            Self::F32(_) => TypeId::F32,
+            Self::F64(_) => TypeId::F64,
+            Self::String(_) => TypeId::String,
+            Self::Symbol(_) => TypeId::Symbol,
+            Self::Array(_) => TypeId::Array,
+            Self::Lazy(_) => TypeId::Lazy,
             Self::Label(_) => panic!("tried to get type of label."),
         }
     }
 }
-
-const ALL_TYPES: &[&str] = &[
-    "bool", "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64", "i128", "u128", "f32", "f64",
-    "string", "symbol", "[]", "{}",
-];
 
 pub struct Variable {
     pub value: Value,
@@ -98,11 +95,11 @@ pub enum FunctionCode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
-    pub types: Vec<String>,
+    pub types: Vec<types::TypeId>,
     pub code: FunctionCode,
 }
 
-pub type FunctionMap = HashMap<String, HashMap<String, Function>>;
+pub type FunctionMap = HashMap<types::TypeId, HashMap<String, Function>>;
 pub type VariableMapStack = Vec<HashMap<String, Variable>>;
 
 pub struct Environment {
@@ -114,8 +111,8 @@ pub struct Environment {
 impl Default for Environment {
     fn default() -> Self {
         let mut fn_map = HashMap::new();
-        for n in ALL_TYPES {
-            fn_map.insert(n.to_string(), HashMap::new());
+        for n in types::ALL_PREMITIVE_TYPES {
+            fn_map.insert(n.clone(), HashMap::new());
             print::insert_print(&mut fn_map, n);
             variable::insert_variable_definition(&mut fn_map, n);
             cmp::insert_compare_functions(&mut fn_map, n);
@@ -270,7 +267,7 @@ fn eval_sentence_inner(
             continue;
         }
         if is_end_sentence(tokens) {
-            return Err(format!("error: too few arguments passed to '{t}' on '{vn}'.").into());
+            return Err(format!("error: too few arguments passed to '{vn}' on '{t}'.").into());
         }
         let arg = eval_sentence_inner(env, tokens, None)?;
         let arg = expand_label(env, arg)?;
@@ -296,7 +293,12 @@ fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
     }
 }
 
-fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> RResult<bool> {
+fn check_argument_types(
+    env: &Environment,
+    t: &types::TypeId,
+    v: &str,
+    args: &[Value],
+) -> RResult<bool> {
     let f = env
         .fn_map
         .get(t)
@@ -308,7 +310,7 @@ fn check_argument_types(env: &Environment, t: &str, v: &str, args: &[Value]) -> 
         .types
         .iter()
         .zip(args.iter())
-        .all(|(n, m)| n == &m.get_typeid() || n == "_")
+        .all(|(n, m)| n == &m.get_typeid() || n == &types::TypeId::Any)
     {
         Ok(true)
     } else {

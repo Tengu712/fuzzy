@@ -1,41 +1,42 @@
-use super::*;
+use super::{types::TypeId, *};
 
 pub fn insert_bool_functions(maps: &mut FunctionMap) {
     let map = maps
-        .get_mut("bool")
-        .unwrap_or_else(|| panic!("function map for 'bool' not found."));
+        .get_mut(&TypeId::Bool)
+        .unwrap_or_else(|| panic!("function map for '{}' not found.", TypeId::Bool));
+
     map.insert(
         "~".to_string(),
         Function {
-            types: vec![],
+            types: Vec::new(),
             code: FunctionCode::Builtin(not),
         },
     );
     map.insert(
         ">>".to_string(),
         Function {
-            types: vec!["{}".to_string()],
+            types: vec![TypeId::Lazy],
             code: FunctionCode::Builtin(on_then),
         },
     );
     map.insert(
         "!>".to_string(),
         Function {
-            types: vec!["{}".to_string()],
+            types: vec![TypeId::Lazy],
             code: FunctionCode::Builtin(on_else),
         },
     );
     map.insert(
         "&&".to_string(),
         Function {
-            types: vec!["bool".to_string()],
+            types: vec![TypeId::Bool],
             code: FunctionCode::Builtin(and),
         },
     );
     map.insert(
         "||".to_string(),
         Function {
-            types: vec!["bool".to_string()],
+            types: vec![TypeId::Bool],
             code: FunctionCode::Builtin(or),
         },
     );
@@ -89,7 +90,7 @@ fn unwrap_subject(s: Value, name: &str) -> bool {
     match s {
         Value::Nil => false,
         Value::Top => true,
-        _ => panic!("type missmatched on 'bool:{name}'."),
+        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
     }
 }
 
@@ -97,7 +98,7 @@ fn unwrap_object(s: Option<Value>, name: &str) -> bool {
     match s {
         Some(Value::Nil) => false,
         Some(Value::Top) => true,
-        _ => panic!("type missmatched on 'bool:{name}'."),
+        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
     }
 }
 
@@ -105,6 +106,6 @@ fn unwrap_lazy_block(s: Option<Value>, name: &str) -> Vec<Token> {
     if let Some(Value::Lazy(n)) = s {
         n
     } else {
-        panic!("type missmatched on 'bool:{name}'.");
+        panic!("type missmatched on '{}:{name}'.", TypeId::Bool);
     }
 }

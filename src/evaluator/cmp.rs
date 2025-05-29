@@ -1,53 +1,54 @@
-use super::*;
+use super::{types::TypeId, *};
 
-pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &str) {
+pub fn insert_compare_functions(maps: &mut FunctionMap, ty: &TypeId) {
     let map = maps
         .get_mut(ty)
         .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
+
     map.insert(
         "==".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(equal),
         },
     );
     map.insert(
         "!=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(not_equal),
         },
     );
 
-    if ty == "[]" || ty == "{}" {
+    if matches!(ty, TypeId::Array | TypeId::Lazy) {
         return;
     }
 
     map.insert(
         "<".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(l),
         },
     );
     map.insert(
         ">".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(g),
         },
     );
     map.insert(
         "<=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(le),
         },
     );
     map.insert(
         ">=".to_string(),
         Function {
-            types: vec![ty.to_string()],
+            types: vec![ty.clone()],
             code: FunctionCode::Builtin(ge),
         },
     );
@@ -147,7 +148,7 @@ macro_rules! define_inequality_compare {
                 _ => panic!(
                     "tried to compare {} and {}",
                     self.get_typeid(),
-                    other.get_typeid()
+                    other.get_typeid(),
                 ),
             }
         }
@@ -186,7 +187,7 @@ impl Value {
             _ => panic!(
                 "tried to compare {} and {}",
                 self.get_typeid(),
-                other.get_typeid()
+                other.get_typeid(),
             ),
         }
     }

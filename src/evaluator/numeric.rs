@@ -1,4 +1,4 @@
-use super::*;
+use super::{types::TypeId, *};
 
 macro_rules! for_all_numeric_types {
     ($macro: ident $(, $($arg: tt)*)?) => {
@@ -19,13 +19,15 @@ macro_rules! for_all_numeric_types {
 
 macro_rules! insert_numeric_function {
     ($maps: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
+        let ty = TypeId::from(stringify!($ty))
+            .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
         $maps
-            .get_mut(stringify!($ty))
+            .get_mut(&ty)
             .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
             .insert(
                 stringify!($op).to_string(),
                 Function {
-                    types: vec![stringify!($ty).to_string()],
+                    types: vec![ty],
                     code: FunctionCode::Builtin(paste::item! {[<$fn $ty>]}),
                 },
             );
@@ -34,13 +36,15 @@ macro_rules! insert_numeric_function {
 
 macro_rules! insert_cast {
     ($maps: expr, $ty: ident, $_: ident) => {
+        let ty = TypeId::from(stringify!($ty))
+            .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
         $maps
-            .get_mut(stringify!($ty))
+            .get_mut(&ty)
             .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
             .insert(
                 ":".to_string(),
                 Function {
-                    types: vec!["symbol".to_string()],
+                    types: vec![TypeId::Symbol],
                     code: FunctionCode::Builtin(paste::item! {[<cast $ty>]}),
                 },
             );
