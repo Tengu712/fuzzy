@@ -1,159 +1,37 @@
-mod array;
-mod boolean;
-mod cmp;
-mod lazy;
-mod numeric;
-mod print;
-mod symbol;
+mod functions;
 mod types;
+mod value;
 mod variable;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    Nil,
-    Top,
-    I8(i8),
-    U8(u8),
-    I16(i16),
-    U16(u16),
-    I32(i32),
-    U32(u32),
-    I64(i64),
-    U64(u64),
-    I128(i128),
-    U128(u128),
-    F32(f32),
-    F64(f64),
-    String(String),
-    Symbol(String),
-    Array(Vec<Value>),
-    Lazy(Vec<Token>),
-    Function((types::TypeId, Vec<Token>)),
-    Label(String),
-}
-
-impl Value {
-    fn from(token: Token) -> Self {
-        match token {
-            Token::Top => Self::Top,
-            Token::I8(n) => Self::I8(n),
-            Token::U8(n) => Self::U8(n),
-            Token::I16(n) => Self::I16(n),
-            Token::U16(n) => Self::U16(n),
-            Token::I32(n) => Self::I32(n),
-            Token::U32(n) => Self::U32(n),
-            Token::I64(n) => Self::I64(n),
-            Token::U64(n) => Self::U64(n),
-            Token::I128(n) => Self::I128(n),
-            Token::U128(n) => Self::U128(n),
-            Token::F32(n) => Self::F32(n),
-            Token::F64(n) => Self::F64(n),
-            Token::String(n) => Self::String(n),
-            Token::Symbol(n) => Self::Symbol(n),
-            Token::Label(n) => Self::Label(n),
-            _ => panic!("tried to create value from non-atom token."),
-        }
-    }
-
-    fn get_typeid(&self) -> types::TypeId {
-        use types::TypeId;
-        match self {
-            Self::Nil => TypeId::Bool,
-            Self::Top => TypeId::Bool,
-            Self::I8(_) => TypeId::I8,
-            Self::U8(_) => TypeId::U8,
-            Self::I16(_) => TypeId::I16,
-            Self::U16(_) => TypeId::U16,
-            Self::I32(_) => TypeId::I32,
-            Self::U32(_) => TypeId::U32,
-            Self::I64(_) => TypeId::I64,
-            Self::U64(_) => TypeId::U64,
-            Self::I128(_) => TypeId::I128,
-            Self::U128(_) => TypeId::U128,
-            Self::F32(_) => TypeId::F32,
-            Self::F64(_) => TypeId::F64,
-            Self::String(_) => TypeId::String,
-            Self::Symbol(_) => TypeId::Symbol,
-            Self::Array(_) => TypeId::Array,
-            Self::Lazy(_) => TypeId::Lazy,
-            Self::Function((n, _)) => n.clone(),
-            Self::Label(_) => panic!("tried to get type of label."),
-        }
-    }
-}
-
-pub struct Variable {
-    pub value: Value,
-    pub mutable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum FunctionCode {
-    Builtin(fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Function {
-    pub types: Vec<types::TypeId>,
-    pub code: FunctionCode,
-}
-
-pub type FunctionMap = HashMap<types::TypeId, HashMap<String, Function>>;
-pub type VariableMapStack = Vec<HashMap<String, Variable>>;
-
+#[derive(Default)]
 pub struct Environment {
-    pub fn_map: FunctionMap,
-    pub vr_map: VariableMapStack,
-    pub args: Vec<Vec<Value>>,
-    pub evaluated: Vec<Option<Value>>,
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        let mut fn_map = HashMap::new();
-        for n in types::ALL_PREMITIVE_TYPES {
-            fn_map.insert(n.clone(), HashMap::new());
-            print::insert_print(&mut fn_map, n);
-            variable::insert_variable_definition(&mut fn_map, n);
-            cmp::insert_compare_functions(&mut fn_map, n);
-        }
-        array::insert_array_functions(&mut fn_map);
-        boolean::insert_bool_functions(&mut fn_map);
-        lazy::insert_lazy_functions(&mut fn_map);
-        numeric::insert_numeric_functions(&mut fn_map);
-        symbol::insert_symbol_value(&mut fn_map);
-
-        Self {
-            fn_map,
-            vr_map: Vec::new(),
-            args: Vec::new(),
-            evaluated: Vec::new(),
-        }
-    }
+    fn_map: functions::FunctionMap,
+    vr_map: variable::VariableMapStack,
+    args: Vec<Vec<value::Value>>,
+    evaluated: Vec<Option<value::Value>>,
 }
 
 impl Environment {
-    fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
-        self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
-    }
-
-    pub fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.vr_map.iter().rev().find_map(|n| n.get(name))
-    }
-
-    pub fn get_variable_unwrap(&self, name: &str) -> RResult<Value> {
-        if let Some(n) = self.get_variable(name) {
-            // OPTIMIZE: remove clone.
-            Ok(n.value.clone())
-        } else {
-            Err(format!("error: undefined variable '{name}' found.").into())
+    pub fn prepare_block_scope(&mut self, args: Option<Vec<value::Value>>) {
+        if let Some(n) = args {
+            self.args.push(n);
         }
+        self.vr_map.push();
+        self.evaluated.push(None);
     }
 
-    fn get_argument(&self, i: usize) -> Option<Value> {
+    pub fn cleanup_block_scope(&mut self, should_pop_args: bool) {
+        if should_pop_args {
+            self.args.pop();
+        }
+        self.vr_map.pop();
+        self.evaluated.pop();
+    }
+
+    fn get_argument(&self, i: usize) -> Option<value::Value> {
         // OPTIMIZE: remove clone.
         self.args
             .last()
@@ -162,15 +40,22 @@ impl Environment {
             .cloned()
     }
 
-    fn take_evaluated(&mut self) -> Option<Value> {
+    fn take_evaluated(&mut self) -> Option<value::Value> {
         self.evaluated.last_mut().and_then(|n| n.take())
     }
 
-    fn set_evaluated(&mut self, v: Value) {
+    fn set_evaluated(&mut self, v: value::Value) {
         if let Some(n) = self.evaluated.last_mut() {
             *n = Some(v);
         }
     }
+}
+
+/// A function to convert command line arguments to Fuzzy values.
+pub fn parse_command_line_args(args: Vec<String>) -> Vec<value::Value> {
+    args.into_iter()
+        .map(value::Value::String)
+        .collect::<Vec<_>>()
 }
 
 /// A function to evaluate a block.
@@ -189,23 +74,12 @@ impl Environment {
 pub fn eval_block(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
-    args: Option<Vec<Value>>,
-) -> RResult<Vec<Value>> {
-    let args_is_some = args.is_some();
-    if args_is_some {
-        env.args.push(args.unwrap());
-    };
-    env.vr_map.push(HashMap::new());
-    env.evaluated.push(None);
-
+    args: Option<Vec<value::Value>>,
+) -> RResult<Vec<value::Value>> {
+    let should_pop_args = args.is_some();
+    env.prepare_block_scope(args);
     let results = eval_block_directly(env, tokens);
-
-    if args_is_some {
-        env.args.pop();
-    }
-    env.vr_map.pop();
-    env.evaluated.pop();
-
+    env.cleanup_block_scope(should_pop_args);
     results
 }
 
@@ -218,7 +92,10 @@ pub fn eval_block(
 ///       The caller is responsible for managing the stack.
 ///       This is to accommodate the behavior where top-level blocks in a REPL
 ///       have their environments expanded globally.
-pub fn eval_block_directly(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Vec<Value>> {
+pub fn eval_block_directly(
+    env: &mut Environment,
+    tokens: &mut Vec<Token>,
+) -> RResult<Vec<value::Value>> {
     let mut values = Vec::new();
     let mut dotted = true;
     while !tokens.is_empty() || env.evaluated.last().map(|n| n.is_some()).unwrap_or(false) {
@@ -226,7 +103,7 @@ pub fn eval_block_directly(env: &mut Environment, tokens: &mut Vec<Token>) -> RR
         dotted = eat_dot(tokens);
     }
     if dotted {
-        values.push(Value::Nil);
+        values.push(value::Value::Nil);
     }
     Ok(values)
 }
@@ -239,7 +116,7 @@ fn eat_dot(tokens: &mut Vec<Token>) -> bool {
 ///
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
-fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<value::Value> {
     let mut s = env.take_evaluated();
     loop {
         let n = eval_sentence_inner(env, tokens, s)?;
@@ -255,11 +132,11 @@ fn eval_sentence(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Valu
 fn eval_sentence_inner(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
-    s: Option<Value>,
-) -> RResult<Value> {
+    s: Option<value::Value>,
+) -> RResult<value::Value> {
     // end?
     if is_end_sentence(tokens) {
-        return Ok(s.unwrap_or(Value::Nil));
+        return Ok(s.unwrap_or(value::Value::Nil));
     }
 
     // get subject
@@ -273,32 +150,32 @@ fn eval_sentence_inner(
 
     // get verb
     let v = eval_expression(env, tokens)?;
-    let Value::Label(vn) = &v else {
+    let value::Value::Label(vn) = &v else {
         env.set_evaluated(v);
         return Ok(s);
     };
 
     // get verb function
-    let t = s.get_typeid();
-    if !env
-        .fn_map
-        .get(&t)
-        .map(|n| n.contains_key(vn))
-        .unwrap_or(false)
-    {
+    let t = s.typeid();
+    if !env.fn_map.is_defined(&t, vn) {
         env.set_evaluated(v);
         return Ok(s);
     };
 
     // collect arguments
     let mut args = Vec::new();
-    while !check_argument_types(env, &t, vn, &args)? {
+    loop {
+        match env.fn_map.check_types(&t, vn, &args) {
+            functions::TypesCheckResult::Undecided => (),
+            functions::TypesCheckResult::Ok => break,
+            functions::TypesCheckResult::Err(e) => return Err(e.into()),
+        }
         if let Some(arg) = env.take_evaluated() {
             args.push(arg);
             continue;
         }
         if is_end_sentence(tokens) {
-            return Err(format!("error: too few arguments passed to '{vn}' on '{t}'.").into());
+            return Err(format!("error: too few arguments passed to {vn} on {t}.").into());
         }
         let arg = eval_sentence_inner(env, tokens, None)?;
         let arg = expand_label(env, arg)?;
@@ -307,8 +184,8 @@ fn eval_sentence_inner(
     args.reverse();
 
     // applicate
-    let result = match env.fn_map[&t][vn].code {
-        FunctionCode::Builtin(f) => (f)(env, s, args)?,
+    let result = match env.fn_map.get_code(&t, vn) {
+        functions::FunctionCode::Builtin(f) => (f)(env, s, args)?,
     };
     Ok(result)
 }
@@ -317,51 +194,10 @@ fn is_end_sentence(tokens: &[Token]) -> bool {
     matches!(tokens.last(), None | Some(Token::Dot) | Some(Token::Comma))
 }
 
-fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
+fn expand_label(env: &Environment, n: value::Value) -> RResult<value::Value> {
     match n {
-        Value::Label(n) => env.get_variable_unwrap(&n),
+        value::Value::Label(n) => env.vr_map.get_unwrap(&n),
         n => Ok(n),
-    }
-}
-
-fn check_argument_types(
-    env: &Environment,
-    t: &types::TypeId,
-    v: &str,
-    args: &[Value],
-) -> RResult<bool> {
-    let f = env
-        .fn_map
-        .get(t)
-        .and_then(|n| n.get(v))
-        .unwrap_or_else(|| panic!("tried to get undefined function '{v}' on '{t}'"));
-    if f.types.len() > args.len() {
-        Ok(false)
-    } else if f
-        .types
-        .iter()
-        .zip(args.iter())
-        .all(|(n, m)| n == &m.get_typeid() || n == &types::TypeId::Any)
-    {
-        Ok(true)
-    } else {
-        let expected = f
-            .types
-            .iter()
-            .enumerate()
-            .map(|(i, n)| format!("({}) {n}", i + 1))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let instead = args
-            .iter()
-            .enumerate()
-            .map(|(i, n)| format!("({}) {}", i + 1, n.get_typeid()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        Err(
-            format!("error: '{v}' on '{t}' expected arguments {expected}, but passed {instead}.")
-                .into(),
-        )
     }
 }
 
@@ -369,7 +205,7 @@ fn check_argument_types(
 ///
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
-fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
+fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<value::Value> {
     match tokens.pop() {
         None => panic!("no token passed to eval_expression."),
         Some(Token::Dot) => panic!("Token::Dot passed to eval_expression."),
@@ -388,7 +224,7 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
             let Some(n) = extract_brackets_content(tokens, Token::LBrace, Token::RBrace) else {
                 return Err("error: unmatched '{' found.".into());
             };
-            Ok(Value::Lazy(n))
+            Ok(value::Value::Lazy(n))
         }
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
         Some(Token::LBracket) => {
@@ -397,13 +233,13 @@ fn eval_expression(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Va
                 return Err("error: unmatched '[' found.".into());
             };
             let results = eval_block(env, &mut n, None)?;
-            Ok(Value::Array(results))
+            Ok(value::Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),
         Some(Token::Argument(n)) => env
             .get_argument(n)
             .ok_or(format!("error: argument at {n} not found.").into()),
-        Some(n) => Ok(Value::from(n)),
+        Some(n) => Ok(value::Value::from(n)),
     }
 }
 

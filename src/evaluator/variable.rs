@@ -1,54 +1,47 @@
-use super::{types::TypeId, *};
+use super::value::Value;
+use crate::RResult;
+use std::collections::HashMap;
 
-pub fn insert_variable_definition(maps: &mut FunctionMap, ty: &TypeId) {
-    let map = maps
-        .get_mut(ty)
-        .unwrap_or_else(|| panic!("function map for '{ty}' not found."));
-
-    map.insert(
-        "->".to_string(),
-        Function {
-            types: vec![TypeId::Symbol],
-            code: FunctionCode::Builtin(define_mutable),
-        },
-    );
-    map.insert(
-        "=>".to_string(),
-        Function {
-            types: vec![TypeId::Symbol],
-            code: FunctionCode::Builtin(define_immutable),
-        },
-    );
+pub struct Variable {
+    pub value: Value,
+    pub mutable: bool,
 }
 
-macro_rules! define_variable_definition {
-    ($fn: ident, $name: expr, $mutable: expr) => {
-        fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-            let Some(Value::Symbol(o)) = args.pop() else {
-                panic!("type missmatched on '{}:{}'.", s.get_typeid(), $name);
-            };
-            if o == "T" {
-                return Err(format!("error: cannot redefine 'T'.").into());
-            }
-            let n = env.get_variable_mut(&o);
-            if !n.as_ref().map(|n| n.mutable).unwrap_or(true) {
-                return Err(format!("error: cannot redefine variable '{o}'.").into());
-            }
-            let v = Variable {
-                value: s,
-                mutable: $mutable,
-            };
-            if let Some(n) = n {
-                *n = v;
-            } else {
-                env.vr_map
-                    .last_mut()
-                    .expect("variable map stack is empty.")
-                    .insert(o, v);
-            }
-            Ok(Value::Nil)
+#[derive(Default)]
+pub struct VariableMapStack {
+    map: Vec<HashMap<String, Variable>>,
+}
+
+impl VariableMapStack {
+    pub fn push(&mut self) {
+        self.map.push(HashMap::new());
+    }
+
+    pub fn pop(&mut self) {
+        self.map.pop();
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Variable> {
+        self.map.iter().rev().find_map(|n| n.get(name))
+    }
+
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut Variable> {
+        self.map.iter_mut().rev().find_map(|n| n.get_mut(name))
+    }
+
+    pub fn get_unwrap(&self, name: &str) -> RResult<Value> {
+        if let Some(n) = self.get(name) {
+            // OPTIMIZE: remove clone.
+            Ok(n.value.clone())
+        } else {
+            Err(format!("error: undefined variable {name} found.").into())
         }
-    };
+    }
+
+    pub fn insert(&mut self, key: String, value: Variable) {
+        self.map
+            .last_mut()
+            .expect("variable map stack is empty.")
+            .insert(key, value);
+    }
 }
-define_variable_definition!(define_mutable, "->", true);
-define_variable_definition!(define_immutable, "=>", false);

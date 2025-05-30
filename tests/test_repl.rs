@@ -61,7 +61,7 @@ fn test_define_defined_symbol_variable() {
 fn test_define_variable_upper_scope() {
     run(
         "(1 => 'a)\na\n#exit",
-        ">> ()\n>> error: undefined variable 'a' found.\n>> ",
+        ">> ()\n>> error: undefined variable a found.\n>> ",
     );
 }
 
@@ -82,7 +82,7 @@ fn test_redefine_variable_upper_scope() {
 fn test_restrict_redefine_variable_same_scope() {
     run(
         "1 => 'a.\n2 -> 'a.\n#exit",
-        ">> ()\n>> error: cannot redefine variable 'a'.\n>> ",
+        ">> ()\n>> error: cannot redefine variable a.\n>> ",
     );
 }
 
@@ -90,7 +90,7 @@ fn test_restrict_redefine_variable_same_scope() {
 fn test_restrict_redefine_variable_upper_scope() {
     run(
         "1 => 'a. (2 -> 'a)\n#exit",
-        ">> error: cannot redefine variable 'a'.\n>> ",
+        ">> error: cannot redefine variable a.\n>> ",
     );
 }
 

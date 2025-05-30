@@ -1,4 +1,4 @@
-use super::{types::TypeId, *};
+use super::*;
 
 macro_rules! for_all_numeric_types {
     ($macro: ident $(, $($arg: tt)*)?) => {
@@ -18,40 +18,36 @@ macro_rules! for_all_numeric_types {
 }
 
 macro_rules! insert_numeric_function {
-    ($maps: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
+    ($fm: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
         let ty = TypeId::from(stringify!($ty))
             .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
-        $maps
-            .get_mut(&ty)
-            .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
-            .insert(
-                stringify!($op).to_string(),
-                Function {
-                    types: vec![ty],
-                    code: FunctionCode::Builtin(paste::item! {[<$fn $ty>]}),
-                },
-            );
+        $fm.insert_all(
+            &ty,
+            vec![builtin_fn!(
+                stringify!($op),
+                vec![ty.clone()],
+                paste::item! {[<$fn $ty>]}
+            )],
+        );
     };
 }
 
 macro_rules! insert_cast {
-    ($maps: expr, $ty: ident, $_: ident) => {
+    ($fm: expr, $ty: ident, $_: ident) => {
         let ty = TypeId::from(stringify!($ty))
             .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
-        $maps
-            .get_mut(&ty)
-            .unwrap_or_else(|| panic!("function map for '{}' not found.", stringify!($ty)))
-            .insert(
-                ":".to_string(),
-                Function {
-                    types: vec![TypeId::Symbol],
-                    code: FunctionCode::Builtin(paste::item! {[<cast $ty>]}),
-                },
-            );
+        $fm.insert_all(
+            &ty,
+            vec![builtin_fn!(
+                ":",
+                vec![TypeId::Symbol],
+                paste::item! {[<cast $ty>]}
+            )],
+        );
     };
 }
 
-pub fn insert_numeric_functions(maps: &mut FunctionMap) {
+pub fn insert(maps: &mut FunctionMap) {
     for_all_numeric_types!(insert_numeric_function, maps, add, +);
     for_all_numeric_types!(insert_numeric_function, maps, sub, -);
     for_all_numeric_types!(insert_numeric_function, maps, mul, *);
@@ -63,9 +59,8 @@ macro_rules! define_numeric_function {
     ($fn: ident, $op: tt, $ty: ident, $variant: ident) => {
         paste::item! {
             fn [<$fn $ty>](_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-                let (Value::$variant(s), Some(Value::$variant(o))) = (s, args.pop()) else {
-                    panic!("type missmatched on '{}:{}'", stringify!($ty), stringify!($op));
-                };
+                let s = extract_variant!(s, $variant);
+                let o = pop_extract_variant!(args, $variant);
                 Ok(Value::$variant(s $op o))
             }
         }
@@ -80,9 +75,8 @@ macro_rules! define_cast {
     ($ty: ident, $variant: ident) => {
         paste::item! {
             fn [<cast $ty>](_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-                let (Value::$variant(s), Some(Value::Symbol(o))) = (s, args.pop()) else {
-                    panic!("type missmatched on '{}::'", stringify!($ty));
-                };
+                let s = extract_variant!(s, $variant);
+                let o = pop_extract_variant!(args, Symbol);
                 let n = match o.as_str() {
                     "i8" => Value::I8(s as i8),
                     "u8" => Value::U8(s as u8),
