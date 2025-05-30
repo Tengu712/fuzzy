@@ -61,7 +61,7 @@ fn test_define_defined_symbol_variable() {
 fn test_define_variable_upper_scope() {
     run(
         "(1 => 'a)\na\n#exit",
-        ">> ()\n>> error: undefined variable 'a' found.\n>> ",
+        ">> ()\n>> error: undefined variable a found.\n>> ",
     );
 }
 

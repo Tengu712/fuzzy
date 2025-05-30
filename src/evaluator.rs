@@ -1,19 +1,15 @@
 mod functions;
 mod types;
 mod value;
+mod variable;
 
 use crate::{lexer::*, *};
 use std::collections::HashMap;
 
-struct Variable {
-    value: value::Value,
-    mutable: bool,
-}
-
 #[derive(Default)]
 pub struct Environment {
     fn_map: functions::FunctionMap,
-    vr_map: Vec<HashMap<String, Variable>>,
+    vr_map: variable::VariableMapStack,
     args: Vec<Vec<value::Value>>,
     evaluated: Vec<Option<value::Value>>,
 }
@@ -23,7 +19,7 @@ impl Environment {
         if let Some(n) = args {
             self.args.push(n);
         }
-        self.vr_map.push(HashMap::new());
+        self.vr_map.push();
         self.evaluated.push(None);
     }
 
@@ -33,23 +29,6 @@ impl Environment {
         }
         self.vr_map.pop();
         self.evaluated.pop();
-    }
-
-    fn get_variable_mut(&mut self, name: &str) -> Option<&mut Variable> {
-        self.vr_map.iter_mut().rev().find_map(|n| n.get_mut(name))
-    }
-
-    fn get_variable(&self, name: &str) -> Option<&Variable> {
-        self.vr_map.iter().rev().find_map(|n| n.get(name))
-    }
-
-    fn get_variable_unwrap(&self, name: &str) -> RResult<value::Value> {
-        if let Some(n) = self.get_variable(name) {
-            // OPTIMIZE: remove clone.
-            Ok(n.value.clone())
-        } else {
-            Err(format!("error: undefined variable '{name}' found.").into())
-        }
     }
 
     fn get_argument(&self, i: usize) -> Option<value::Value> {
@@ -196,7 +175,7 @@ fn eval_sentence_inner(
             continue;
         }
         if is_end_sentence(tokens) {
-            return Err(format!("error: too few arguments passed to '{vn}' on '{t}'.").into());
+            return Err(format!("error: too few arguments passed to {vn} on {t}.").into());
         }
         let arg = eval_sentence_inner(env, tokens, None)?;
         let arg = expand_label(env, arg)?;
@@ -217,7 +196,7 @@ fn is_end_sentence(tokens: &[Token]) -> bool {
 
 fn expand_label(env: &Environment, n: value::Value) -> RResult<value::Value> {
     match n {
-        value::Value::Label(n) => env.get_variable_unwrap(&n),
+        value::Value::Label(n) => env.vr_map.get_unwrap(&n),
         n => Ok(n),
     }
 }

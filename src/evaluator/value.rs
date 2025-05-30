@@ -156,8 +156,8 @@ impl Value {
             Self::Top => self.to_string(),
             Self::Array(_) => self.to_string(),
             Self::Lazy(_) => self.to_string(),
-            Self::Symbol(n) if env.get_variable(n).is_some() => {
-                let v = env.get_variable(n).unwrap();
+            Self::Symbol(n) if env.vr_map.get(n).is_some() => {
+                let v = env.vr_map.get(n).unwrap();
                 let s = v.value.format_in_detail(env);
                 let a = if v.mutable { "<-" } else { "<=" };
                 format!("{n} {a} {s}")
