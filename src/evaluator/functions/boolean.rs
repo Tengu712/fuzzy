@@ -4,23 +4,11 @@ pub fn insert(fm: &mut FunctionMap) {
     fm.insert_all(
         &TypeId::Bool,
         vec![
-            ("~".to_string(), (Vec::new(), FunctionCode::Builtin(not))),
-            (
-                ">>".to_string(),
-                (vec![TypeId::Lazy], FunctionCode::Builtin(on_then)),
-            ),
-            (
-                "!>".to_string(),
-                (vec![TypeId::Lazy], FunctionCode::Builtin(on_else)),
-            ),
-            (
-                "&&".to_string(),
-                (vec![TypeId::Bool], FunctionCode::Builtin(and)),
-            ),
-            (
-                "||".to_string(),
-                (vec![TypeId::Bool], FunctionCode::Builtin(or)),
-            ),
+            builtin_fn!("~", vec![], not),
+            builtin_fn!(">>", vec![TypeId::Lazy], on_then),
+            builtin_fn!("!>", vec![TypeId::Lazy], on_else),
+            builtin_fn!("&&", vec![TypeId::Bool], and),
+            builtin_fn!("||", vec![TypeId::Bool], or),
         ],
     );
 }

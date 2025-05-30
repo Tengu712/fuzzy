@@ -4,17 +4,8 @@ pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
     fm.insert_all(
         ty,
         vec![
-            (
-                "->".to_string(),
-                (vec![TypeId::Symbol], FunctionCode::Builtin(define_mutable)),
-            ),
-            (
-                "=>".to_string(),
-                (
-                    vec![TypeId::Symbol],
-                    FunctionCode::Builtin(define_immutable),
-                ),
-            ),
+            builtin_fn!("->", vec![TypeId::Symbol], define_mutable),
+            builtin_fn!("=>", vec![TypeId::Symbol], define_immutable),
         ],
     );
 }
@@ -22,9 +13,7 @@ pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
 macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-            let Some(Value::Symbol(o)) = args.pop() else {
-                panic!("type missmatched on '{}:{}'.", s.typeid(), $name);
-            };
+            let o = pop_extract_variant!(args, Symbol);
             if o == "T" {
                 return Err(format!("error: cannot redefine 'T'.").into());
             }

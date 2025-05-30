@@ -4,30 +4,15 @@ pub fn insert(fm: &mut FunctionMap) {
     fm.insert_all(
         &TypeId::Array,
         vec![
-            ("#".to_string(), (Vec::new(), FunctionCode::Builtin(length))),
-            (
-                "@".to_string(),
-                (vec![TypeId::I32], FunctionCode::Builtin(at)),
-            ),
-            (
-                "@@".to_string(),
-                (vec![TypeId::I32, TypeId::Any], FunctionCode::Builtin(repl)),
-            ),
-            (
-                "@<".to_string(),
-                (vec![TypeId::I32, TypeId::Any], FunctionCode::Builtin(ins)),
-            ),
-            ("^".to_string(), (Vec::new(), FunctionCode::Builtin(first))),
-            ("$".to_string(), (Vec::new(), FunctionCode::Builtin(last))),
-            (
-                "$>".to_string(),
-                (vec![TypeId::Any], FunctionCode::Builtin(push)),
-            ),
-            (
-                "@-".to_string(),
-                (vec![TypeId::I32], FunctionCode::Builtin(remove)),
-            ),
-            ("$-".to_string(), (Vec::new(), FunctionCode::Builtin(pop))),
+            builtin_fn!("#", vec![], length),
+            builtin_fn!("@", vec![TypeId::I32], at),
+            builtin_fn!("@@", vec![TypeId::I32, TypeId::Any], repl),
+            builtin_fn!("@<", vec![TypeId::I32, TypeId::Any], ins),
+            builtin_fn!("^", vec![], first),
+            builtin_fn!("$", vec![], last),
+            builtin_fn!("$>", vec![TypeId::Any], push),
+            builtin_fn!("@-", vec![TypeId::I32], remove),
+            builtin_fn!("$-", vec![], pop),
         ],
     );
 }

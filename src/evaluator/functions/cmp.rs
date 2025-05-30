@@ -4,14 +4,8 @@ pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
     fm.insert_all(
         ty,
         vec![
-            (
-                "==".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(equal)),
-            ),
-            (
-                "!=".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(not_equal)),
-            ),
+            builtin_fn!("==", vec![ty.clone()], equal),
+            builtin_fn!("!=", vec![ty.clone()], not_equal),
         ],
     );
 
@@ -25,22 +19,10 @@ pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
     fm.insert_all(
         ty,
         vec![
-            (
-                "<".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(l)),
-            ),
-            (
-                ">".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(g)),
-            ),
-            (
-                "<=".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(le)),
-            ),
-            (
-                ">=".to_string(),
-                (vec![ty.clone()], FunctionCode::Builtin(ge)),
-            ),
+            builtin_fn!("<", vec![ty.clone()], l),
+            builtin_fn!(">", vec![ty.clone()], g),
+            builtin_fn!("<=", vec![ty.clone()], le),
+            builtin_fn!(">=", vec![ty.clone()], ge),
         ],
     );
 }

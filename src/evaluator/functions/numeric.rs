@@ -23,12 +23,10 @@ macro_rules! insert_numeric_function {
             .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
         $fm.insert_all(
             &ty,
-            vec![(
-                stringify!($op).to_string(),
-                (
-                    vec![ty.clone()],
-                    FunctionCode::Builtin(paste::item! {[<$fn $ty>]}),
-                ),
+            vec![builtin_fn!(
+                stringify!($op),
+                vec![ty.clone()],
+                paste::item! {[<$fn $ty>]}
             )],
         );
     };
@@ -40,12 +38,10 @@ macro_rules! insert_cast {
             .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
         $fm.insert_all(
             &ty,
-            vec![(
-                ":".to_string(),
-                (
-                    vec![TypeId::Symbol],
-                    FunctionCode::Builtin(paste::item! {[<cast $ty>]}),
-                ),
+            vec![builtin_fn!(
+                ":",
+                vec![TypeId::Symbol],
+                paste::item! {[<cast $ty>]}
             )],
         );
     };
