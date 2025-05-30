@@ -185,7 +185,12 @@ fn eval_sentence_inner(
 
     // collect arguments
     let mut args = Vec::new();
-    while !check_argument_types(env, &t, vn, &args)? {
+    loop {
+        match env.fn_map.check_types(&t, vn, &args) {
+            functions::TypesCheckResult::Undecided => (),
+            functions::TypesCheckResult::Ok => break,
+            functions::TypesCheckResult::Err(e) => return Err(e.into()),
+        }
         if let Some(arg) = env.take_evaluated() {
             args.push(arg);
             continue;
@@ -214,41 +219,6 @@ fn expand_label(env: &Environment, n: value::Value) -> RResult<value::Value> {
     match n {
         value::Value::Label(n) => env.get_variable_unwrap(&n),
         n => Ok(n),
-    }
-}
-
-fn check_argument_types(
-    env: &Environment,
-    t: &types::TypeId,
-    v: &str,
-    args: &[value::Value],
-) -> RResult<bool> {
-    let ts = env.fn_map.get_types(t, v);
-    if ts.len() > args.len() {
-        Ok(false)
-    } else if ts
-        .iter()
-        .zip(args.iter())
-        .all(|(n, m)| n == &m.typeid() || n == &types::TypeId::Any)
-    {
-        Ok(true)
-    } else {
-        let expected = ts
-            .iter()
-            .enumerate()
-            .map(|(i, n)| format!("({}) {n}", i + 1))
-            .collect::<Vec<_>>()
-            .join(", ");
-        let instead = args
-            .iter()
-            .enumerate()
-            .map(|(i, n)| format!("({}) {}", i + 1, n.typeid()))
-            .collect::<Vec<_>>()
-            .join(", ");
-        Err(
-            format!("error: '{v}' on '{t}' expected arguments {expected}, but passed {instead}.")
-                .into(),
-        )
     }
 }
 

@@ -41,6 +41,12 @@ use crate::RResult;
 type BuiltinFunctionCode = fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>;
 type Function = (Vec<TypeId>, FunctionCode);
 
+pub enum TypesCheckResult {
+    Undecided,
+    Ok,
+    Err(String),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCode {
     Builtin(BuiltinFunctionCode),
@@ -80,8 +86,32 @@ impl FunctionMap {
             .unwrap_or(false)
     }
 
-    pub fn get_types(&self, ty: &TypeId, name: &str) -> &Vec<TypeId> {
-        &self.get(ty, name).0
+    pub fn check_types(&self, ty: &TypeId, name: &str, values: &[Value]) -> TypesCheckResult {
+        let len = values.len();
+        let expected = &self.get(ty, name).0;
+
+        if len > expected.len() {
+            panic!("too many arguments passed.");
+        }
+
+        for (i, (n, m)) in values
+            .iter()
+            .map(|n| n.typeid())
+            .zip(expected.iter())
+            .enumerate()
+        {
+            if &n != m && m != &TypeId::Any {
+                return TypesCheckResult::Err(format!(
+                    "error: {name} on {ty} expects {m} for #{i} but got {n}."
+                ));
+            }
+        }
+
+        if len < expected.len() {
+            TypesCheckResult::Undecided
+        } else {
+            TypesCheckResult::Ok
+        }
     }
 
     pub fn get_code(&self, ty: &TypeId, name: &str) -> FunctionCode {
