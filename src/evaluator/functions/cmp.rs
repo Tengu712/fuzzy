@@ -28,7 +28,7 @@ pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
 }
 
 fn equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, "==");
+    let o = pop_object(args);
     if s.equal(&o) {
         Ok(Value::Top)
     } else {
@@ -37,7 +37,7 @@ fn equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
 }
 
 fn not_equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, "!=");
+    let o = pop_object(args);
     if !s.equal(&o) {
         Ok(Value::Top)
     } else {
@@ -46,7 +46,7 @@ fn not_equal(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> 
 }
 
 fn l(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, "<");
+    let o = pop_object(args);
     if s.l(&o) {
         Ok(Value::Top)
     } else {
@@ -55,7 +55,7 @@ fn l(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
 }
 
 fn g(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, ">");
+    let o = pop_object(args);
     if s.g(&o) {
         Ok(Value::Top)
     } else {
@@ -64,7 +64,7 @@ fn g(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
 }
 
 fn le(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, "<=");
+    let o = pop_object(args);
     if s.l(&o) || s.equal(&o) {
         Ok(Value::Top)
     } else {
@@ -73,7 +73,7 @@ fn le(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
 }
 
 fn ge(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
-    let o = pop_object(&s, args, ">=");
+    let o = pop_object(args);
     if s.g(&o) || s.equal(&o) {
         Ok(Value::Top)
     } else {
@@ -81,86 +81,10 @@ fn ge(_: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
     }
 }
 
-fn pop_object(s: &Value, mut args: Vec<Value>, name: &str) -> Value {
+fn pop_object(mut args: Vec<Value>) -> Value {
     if let Some(o) = args.pop() {
         o
     } else {
-        panic!("type missmatched on '{}:{name}'.", s.typeid());
+        panic!("type missmatched.");
     }
-}
-
-macro_rules! define_inequality_compare {
-    ($fn:ident, $op:tt) => {
-        fn $fn(&self, other: &Self) -> bool {
-            match (self, other) {
-                (Self::Nil, Self::Nil) => false,
-                (Self::Top, Self::Top) => false,
-                (Self::I8(a), Self::I8(b)) => a $op b,
-                (Self::U8(a), Self::U8(b)) => a $op b,
-                (Self::I16(a), Self::I16(b)) => a $op b,
-                (Self::U16(a), Self::U16(b)) => a $op b,
-                (Self::I32(a), Self::I32(b)) => a $op b,
-                (Self::U32(a), Self::U32(b)) => a $op b,
-                (Self::I64(a), Self::I64(b)) => a $op b,
-                (Self::U64(a), Self::U64(b)) => a $op b,
-                (Self::I128(a), Self::I128(b)) => a $op b,
-                (Self::U128(a), Self::U128(b)) => a $op b,
-                (Self::F32(a), Self::F32(b)) => a $op b,
-                (Self::F64(a), Self::F64(b)) => a $op b,
-                (Self::String(a), Self::String(b)) => a $op b,
-                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
-                (Self::Array(_), _) | (_, Self::Array(_)) => {
-                    panic!("tried to compare array.");
-                }
-                (Self::Lazy(_), _) | (_, Self::Lazy(_)) => {
-                    panic!("tried to compare lazy.");
-                }
-                (Self::Label(_), _) | (_, Self::Label(_)) => {
-                    panic!("tried to compare label.");
-                }
-                _ => panic!(
-                    "tried to compare {} and {}",
-                    self.typeid(),
-                    other.typeid(),
-                ),
-            }
-        }
-    };
-}
-
-impl Value {
-    fn equal(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Nil, Self::Nil) => true,
-            (Self::Top, Self::Top) => true,
-            (Self::I8(a), Self::I8(b)) => a == b,
-            (Self::U8(a), Self::U8(b)) => a == b,
-            (Self::I16(a), Self::I16(b)) => a == b,
-            (Self::U16(a), Self::U16(b)) => a == b,
-            (Self::I32(a), Self::I32(b)) => a == b,
-            (Self::U32(a), Self::U32(b)) => a == b,
-            (Self::I64(a), Self::I64(b)) => a == b,
-            (Self::U64(a), Self::U64(b)) => a == b,
-            (Self::I128(a), Self::I128(b)) => a == b,
-            (Self::U128(a), Self::U128(b)) => a == b,
-            (Self::F32(a), Self::F32(b)) => a == b,
-            (Self::F64(a), Self::F64(b)) => a == b,
-            (Self::String(a), Self::String(b)) => a == b,
-            (Self::Symbol(a), Self::Symbol(b)) => a == b,
-            (Self::Array(a), Self::Array(b)) => {
-                a.len() == b.len()
-                    && a.iter()
-                        .zip(b.iter())
-                        .all(|(x, y)| x.typeid() == y.typeid() && x.equal(y))
-            }
-            (Self::Lazy(a), Self::Lazy(b)) => a == b,
-            (Self::Label(_), _) | (_, Self::Label(_)) => {
-                panic!("tried to compare label.");
-            }
-            _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
-        }
-    }
-
-    define_inequality_compare!(l, <);
-    define_inequality_compare!(g, >);
 }

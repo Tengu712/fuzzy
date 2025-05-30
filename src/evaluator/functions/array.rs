@@ -5,26 +5,36 @@ pub fn insert(fm: &mut FunctionMap) {
         &TypeId::Array,
         vec![
             builtin_fn!("#", vec![], length),
-            builtin_fn!("@", vec![TypeId::I32], at),
-            builtin_fn!("@@", vec![TypeId::I32, TypeId::Any], repl),
-            builtin_fn!("@<", vec![TypeId::I32, TypeId::Any], ins),
             builtin_fn!("^", vec![], first),
             builtin_fn!("$", vec![], last),
-            builtin_fn!("$>", vec![TypeId::Any], push),
+            builtin_fn!("@", vec![TypeId::I32], at),
+            builtin_fn!("@@", vec![TypeId::I32, TypeId::Any], replace),
+            builtin_fn!("@<", vec![TypeId::I32, TypeId::Any], ins),
             builtin_fn!("@-", vec![TypeId::I32], remove),
+            builtin_fn!("$>", vec![TypeId::Any], push),
             builtin_fn!("$-", vec![], pop),
         ],
     );
 }
 
 fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s, "#");
+    let s = extract_variant!(s, Array);
     Ok(Value::U32(s.len() as u32))
 }
 
+fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Array);
+    Ok(s.first().cloned().unwrap_or(Value::Nil))
+}
+
+fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Array);
+    Ok(s.last().cloned().unwrap_or(Value::Nil))
+}
+
 fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s, "@");
-    let o = unwrap_index(args.pop(), "@");
+    let s = extract_variant!(s, Array);
+    let o = pop_extract_variant!(args, I32);
     let n = if o >= 0 {
         s.get(o as usize)
     } else {
@@ -34,75 +44,43 @@ fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     Ok(n.cloned().unwrap_or(Value::Nil))
 }
 
-fn repl(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "@@");
-    let o = unwrap_index(args.pop(), "@@");
-    let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:@@'.", TypeId::Array);
-    };
+fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Array);
+    let o = pop_extract_variant!(args, I32);
+    let n = args.pop().expect("type missmatched.");
     let i = convert_index(o, s.len())?;
-    s[i] = t;
+    s[i] = n;
     Ok(Value::Array(s))
 }
 
 fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "@<");
-    let o = unwrap_index(args.pop(), "@<");
-    let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:@<'.", TypeId::Array);
-    };
+    let mut s = extract_variant!(s, Array);
+    let o = pop_extract_variant!(args, I32);
+    let n = args.pop().expect("type missmatched.");
     let i = convert_index(o, s.len())?;
-    s.insert(i, t);
-    Ok(Value::Array(s))
-}
-
-fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s, "^");
-    Ok(s.first().cloned().unwrap_or(Value::Nil))
-}
-
-fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s, "$");
-    Ok(s.last().cloned().unwrap_or(Value::Nil))
-}
-
-fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "$>");
-    let Some(t) = args.pop() else {
-        panic!("type missmatched on '{}:$>'.", TypeId::Array);
-    };
-    s.push(t);
+    s.insert(i, n);
     Ok(Value::Array(s))
 }
 
 fn remove(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "@-");
-    let o = unwrap_index(args.pop(), "@-");
+    let mut s = extract_variant!(s, Array);
+    let o = pop_extract_variant!(args, I32);
     let i = convert_index(o, s.len())?;
     s.remove(i);
     Ok(Value::Array(s))
 }
 
-fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let mut s = unwrap_subject(s, "$-");
-    s.pop();
+fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Array);
+    let o = args.pop().expect("type missmatched.");
+    s.push(o);
     Ok(Value::Array(s))
 }
 
-fn unwrap_subject(s: Value, name: &str) -> Vec<Value> {
-    if let Value::Array(s) = s {
-        s
-    } else {
-        panic!("type missmatched on '{}:{name}'.", TypeId::Array);
-    }
-}
-
-fn unwrap_index(o: Option<Value>, name: &str) -> i32 {
-    if let Some(Value::I32(o)) = o {
-        o
-    } else {
-        panic!("type missmatched on '{}:{name}'.", TypeId::Array);
-    }
+fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Array);
+    s.pop();
+    Ok(Value::Array(s))
 }
 
 fn convert_index(i: i32, l: usize) -> RResult<usize> {
@@ -112,7 +90,7 @@ fn convert_index(i: i32, l: usize) -> RResult<usize> {
     } else if i >= 0 {
         Ok(i as usize)
     } else if i + l < 0 {
-        Err(format!("error: revert index must be -{l} <= index < 0 but passed {i}.").into())
+        Err(format!("error: reverse order index must be -{l} <= index < 0 but passed {i}.").into())
     } else {
         Ok((i + l) as usize)
     }

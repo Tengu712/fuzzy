@@ -15,11 +15,11 @@ macro_rules! define_variable_definition {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
             let o = pop_extract_variant!(args, Symbol);
             if o == "T" {
-                return Err(format!("error: cannot redefine 'T'.").into());
+                return Err(format!("error: cannot redefine T.").into());
             }
             let n = env.get_variable_mut(&o);
             if !n.as_ref().map(|n| n.mutable).unwrap_or(true) {
-                return Err(format!("error: cannot redefine variable '{o}'.").into());
+                return Err(format!("error: cannot redefine variable {o}.").into());
             }
             let v = Variable {
                 value: s,

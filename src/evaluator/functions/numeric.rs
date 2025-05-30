@@ -59,9 +59,8 @@ macro_rules! define_numeric_function {
     ($fn: ident, $op: tt, $ty: ident, $variant: ident) => {
         paste::item! {
             fn [<$fn $ty>](_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-                let (Value::$variant(s), Some(Value::$variant(o))) = (s, args.pop()) else {
-                    panic!("type missmatched on '{}:{}'", stringify!($ty), stringify!($op));
-                };
+                let s = extract_variant!(s, $variant);
+                let o = pop_extract_variant!(args, $variant);
                 Ok(Value::$variant(s $op o))
             }
         }
@@ -76,9 +75,8 @@ macro_rules! define_cast {
     ($ty: ident, $variant: ident) => {
         paste::item! {
             fn [<cast $ty>](_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-                let (Value::$variant(s), Some(Value::Symbol(o))) = (s, args.pop()) else {
-                    panic!("type missmatched on '{}::'", stringify!($ty));
-                };
+                let s = extract_variant!(s, $variant);
+                let o = pop_extract_variant!(args, Symbol);
                 let n = match o.as_str() {
                     "i8" => Value::I8(s as i8),
                     "u8" => Value::U8(s as u8),

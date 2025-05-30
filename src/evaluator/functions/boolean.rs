@@ -14,7 +14,7 @@ pub fn insert(fm: &mut FunctionMap) {
 }
 
 fn not(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    if unwrap_subject(s, "~") {
+    if unwrap_subject(&s) {
         Ok(Value::Nil)
     } else {
         Ok(Value::Top)
@@ -22,24 +22,24 @@ fn not(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 }
 
 fn on_then(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    if unwrap_subject(s.clone(), ">>") {
-        let mut o = unwrap_lazy_block(args.pop(), ">>");
+    if unwrap_subject(&s) {
+        let mut o = pop_extract_variant!(args, Lazy);
         let _ = eval_block(env, &mut o, Some(Vec::new()))?;
     }
     Ok(s)
 }
 
 fn on_else(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    if !unwrap_subject(s.clone(), "!>") {
-        let mut o = unwrap_lazy_block(args.pop(), "!>");
+    if !unwrap_subject(&s) {
+        let mut o = pop_extract_variant!(args, Lazy);
         let _ = eval_block(env, &mut o, Some(Vec::new()))?;
     }
     Ok(s)
 }
 
 fn and(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s.clone(), "&&");
-    let o = unwrap_object(args.pop(), "&&");
+    let s = unwrap_subject(&s);
+    let o = unwrap_object(&mut args);
     if s && o {
         Ok(Value::Top)
     } else {
@@ -48,8 +48,8 @@ fn and(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
 }
 
 fn or(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
-    let s = unwrap_subject(s.clone(), "||");
-    let o = unwrap_object(args.pop(), "||");
+    let s = unwrap_subject(&s);
+    let o = unwrap_object(&mut args);
     if s || o {
         Ok(Value::Top)
     } else {
@@ -57,26 +57,18 @@ fn or(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     }
 }
 
-fn unwrap_subject(s: Value, name: &str) -> bool {
+fn unwrap_subject(s: &Value) -> bool {
     match s {
         Value::Nil => false,
         Value::Top => true,
-        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
+        _ => panic!("type missmatched."),
     }
 }
 
-fn unwrap_object(s: Option<Value>, name: &str) -> bool {
-    match s {
+fn unwrap_object(args: &mut Vec<Value>) -> bool {
+    match args.pop() {
         Some(Value::Nil) => false,
         Some(Value::Top) => true,
-        _ => panic!("type missmatched on '{}:{name}'.", TypeId::Bool),
-    }
-}
-
-fn unwrap_lazy_block(s: Option<Value>, name: &str) -> Vec<Token> {
-    if let Some(Value::Lazy(n)) = s {
-        n
-    } else {
-        panic!("type missmatched on '{}:{name}'.", TypeId::Bool);
+        _ => panic!("type missmatched."),
     }
 }
