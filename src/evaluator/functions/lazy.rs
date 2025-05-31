@@ -4,7 +4,7 @@ pub fn insert(fm: &mut FunctionMap) {
     fm.insert_all(
         &TypeId::Lazy,
         vec![
-            builtin_fn!("@", vec![], eval_lazy_block),
+            builtin_fn!("%", vec![], eval_lazy_block),
             builtin_fn!(":", vec![TypeId::Array], define_function),
         ],
     );
