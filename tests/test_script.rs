@@ -107,6 +107,14 @@ fn test_command_line_argument() {
 }
 
 #[test]
+fn test_while_loop() {
+    run(
+        "tests/scripts/while-loop.fuz",
+        "This message will be printed once.\n012\nabc\n",
+    );
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
