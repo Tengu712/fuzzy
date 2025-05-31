@@ -5,6 +5,7 @@ pub fn insert(fm: &mut FunctionMap) {
         &TypeId::Lazy,
         vec![
             builtin_fn!("%", vec![], eval_lazy_block),
+            builtin_fn!("%%", vec![TypeId::Lazy], while_loop),
             builtin_fn!(":", vec![TypeId::Array], define_function),
         ],
     );
@@ -13,6 +14,19 @@ pub fn insert(fm: &mut FunctionMap) {
 fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
     eval(env, &mut s, Some(Vec::new()))
+}
+
+fn while_loop(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, Lazy);
+    loop {
+        let r = eval(env, &mut s.clone(), Some(Vec::new()))?;
+        if r == Value::Nil {
+            break;
+        }
+        eval(env, &mut o.clone(), Some(vec![r]))?;
+    }
+    Ok(Value::Nil)
 }
 
 fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
