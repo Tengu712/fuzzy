@@ -23,7 +23,7 @@ pub fn eval_sentence(
             break;
         }
         if let Some(vn) = take_verb(env, tokens, caches, &s.as_ref().unwrap().typeid())? {
-            caches.push(Value::Label(vn));
+            caches.push(Value::Symbol(vn));
         } else {
             break;
         }
@@ -43,7 +43,7 @@ fn eval_clause(
     if is_clause_end(tokens, caches) {
         return Ok(None);
     }
-    let s = take_subject(env, tokens, caches)?;
+    let s = pop_cache_or_eval_element(env, tokens, caches)?;
     if is_clause_end(tokens, caches) {
         return Ok(Some(s));
     }
@@ -60,29 +60,56 @@ fn is_clause_end(tokens: &[Token], caches: &[Value]) -> bool {
     matches!(tokens.last(), None | Some(Token::Dot) | Some(Token::Comma)) && caches.is_empty()
 }
 
-fn take_subject(
-    env: &mut Environment,
-    tokens: &mut Vec<Token>,
-    caches: &mut Vec<Value>,
-) -> RResult<Value> {
-    let n = pop_cache_or_eval_element(env, tokens, caches)?;
-    expand_label(env, n)
-}
-
 fn take_verb(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
     caches: &mut Vec<Value>,
     ty: &TypeId,
 ) -> RResult<Option<String>> {
-    let v = pop_cache_or_eval_element(env, tokens, caches)?;
-    match v {
-        Value::Label(n) if env.fn_map.is_defined(ty, n.as_str()) => Ok(Some(n)),
-        v => {
-            caches.push(v);
+    if let Some(n) = caches.pop() {
+        if is_verb_name_value(env, ty, &n) {
+            let Value::Symbol(n) = n else {
+                panic!("failed to extract symbol.");
+            };
+            Ok(Some(n))
+        } else {
+            caches.push(n);
+            Ok(None)
+        }
+    } else if let Some(Token::Label(_)) = tokens.last() {
+        let Token::Label(n) = tokens.pop().unwrap() else {
+            panic!("failed to extract label.");
+        };
+        if is_verb_name(env, ty, n.as_str()) {
+            Ok(Some(n))
+        } else {
+            tokens.push(Token::Label(n));
+            Ok(None)
+        }
+    } else {
+        let n = eval_element(env, tokens)?;
+        if is_verb_name_value(env, ty, &n) {
+            let Value::Symbol(n) = n else {
+                panic!("failed to extract symbol.");
+            };
+            Ok(Some(n))
+        } else {
+            caches.push(n);
             Ok(None)
         }
     }
+}
+
+fn is_verb_name_value(env: &Environment, ty: &TypeId, v: &Value) -> bool {
+    if let Value::Symbol(n) = v {
+        is_verb_name(env, ty, n.as_str())
+    } else {
+        false
+    }
+}
+
+fn is_verb_name(env: &Environment, ty: &TypeId, vn: &str) -> bool {
+    env.fn_map.is_defined(ty, vn) || is_symbol_value(ty, vn)
 }
 
 fn collect_args(
@@ -92,6 +119,9 @@ fn collect_args(
     ty: &TypeId,
     vn: &str,
 ) -> RResult<Vec<Value>> {
+    if is_symbol_value(ty, vn) {
+        return Ok(Vec::new());
+    }
     let mut args = Vec::new();
     loop {
         match env.fn_map.check_types(ty, vn, &args) {
@@ -102,7 +132,7 @@ fn collect_args(
         let Some(arg) = eval_clause(env, tokens, caches)? else {
             return Err(format!("error: too few arguments passed to {} on {}.", vn, ty).into());
         };
-        args.push(expand_label(env, arg)?);
+        args.push(arg);
     }
     args.reverse();
     Ok(args)
@@ -115,6 +145,13 @@ fn appplicate(
     vn: &str,
     args: Vec<Value>,
 ) -> RResult<Value> {
+    if is_symbol_value(ty, vn) {
+        if let Value::Symbol(n) = s {
+            return env.vr_map.get_unwrap(&n);
+        } else {
+            panic!("failed to extract symbol.");
+        }
+    }
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
     }
@@ -132,11 +169,8 @@ fn pop_cache_or_eval_element(
     }
 }
 
-fn expand_label(env: &Environment, value: Value) -> RResult<Value> {
-    match value {
-        Value::Label(n) => env.vr_map.get_unwrap(&n),
-        n => Ok(n),
-    }
+fn is_symbol_value(ty: &TypeId, vn: &str) -> bool {
+    matches!(ty, TypeId::Symbol) && vn == "$"
 }
 
 fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
@@ -164,7 +198,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::Argument(n)) => env
             .get_argument(n)
             .ok_or(format!("error: argument at {n} not found.").into()),
-        Some(n) => Ok(Value::from(n)),
+        Some(n) => Value::from(env, n),
     }
 }
 

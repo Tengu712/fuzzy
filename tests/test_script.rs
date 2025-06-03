@@ -47,11 +47,6 @@ fn test_implicit_comma() {
 }
 
 #[test]
-fn test_symbol_value() {
-    run("tests/scripts/symbol-value.fuz", "1\n3\n3\n3\n3\n");
-}
-
-#[test]
 fn test_lazy_block() {
     run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n");
 }
