@@ -68,8 +68,6 @@ fn eval(
     tokens: &mut Vec<Token>,
     args: Option<Vec<Value>>,
 ) -> RResult<Value> {
-    let result = eval_block(env, tokens, args)?
-        .pop()
-        .expect("evaluating block result is empty.");
+    let result = eval_block(env, tokens, args)?.pop().unwrap_or_default();
     Ok(result)
 }

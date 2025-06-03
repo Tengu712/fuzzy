@@ -26,43 +26,10 @@ pub enum Value {
     Label(String),
 }
 
-macro_rules! define_inequality_compare {
-    ($fn:ident, $op:tt) => {
-        pub fn $fn(&self, other: &Self) -> bool {
-            match (self, other) {
-                (Self::Nil, Self::Nil) => false,
-                (Self::Top, Self::Top) => false,
-                (Self::I8(a), Self::I8(b)) => a $op b,
-                (Self::U8(a), Self::U8(b)) => a $op b,
-                (Self::I16(a), Self::I16(b)) => a $op b,
-                (Self::U16(a), Self::U16(b)) => a $op b,
-                (Self::I32(a), Self::I32(b)) => a $op b,
-                (Self::U32(a), Self::U32(b)) => a $op b,
-                (Self::I64(a), Self::I64(b)) => a $op b,
-                (Self::U64(a), Self::U64(b)) => a $op b,
-                (Self::I128(a), Self::I128(b)) => a $op b,
-                (Self::U128(a), Self::U128(b)) => a $op b,
-                (Self::F32(a), Self::F32(b)) => a $op b,
-                (Self::F64(a), Self::F64(b)) => a $op b,
-                (Self::String(a), Self::String(b)) => a $op b,
-                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
-                (Self::Array(_), _) | (_, Self::Array(_)) => {
-                    panic!("tried to compare array.");
-                }
-                (Self::Lazy(_), _) | (_, Self::Lazy(_)) => {
-                    panic!("tried to compare lazy.");
-                }
-                (Self::Label(_), _) | (_, Self::Label(_)) => {
-                    panic!("tried to compare label.");
-                }
-                _ => panic!(
-                    "tried to compare {} and {}",
-                    self.typeid(),
-                    other.typeid(),
-                ),
-            }
-        }
-    };
+impl Default for Value {
+    fn default() -> Self {
+        Self::Nil
+    }
 }
 
 impl Display for Value {
@@ -100,6 +67,45 @@ impl Display for Value {
             Self::Label(_) => panic!("tried to format label."),
         }
     }
+}
+
+macro_rules! define_inequality_compare {
+    ($fn:ident, $op:tt) => {
+        pub fn $fn(&self, other: &Self) -> bool {
+            match (self, other) {
+                (Self::Nil, Self::Nil) => false,
+                (Self::Top, Self::Top) => false,
+                (Self::I8(a), Self::I8(b)) => a $op b,
+                (Self::U8(a), Self::U8(b)) => a $op b,
+                (Self::I16(a), Self::I16(b)) => a $op b,
+                (Self::U16(a), Self::U16(b)) => a $op b,
+                (Self::I32(a), Self::I32(b)) => a $op b,
+                (Self::U32(a), Self::U32(b)) => a $op b,
+                (Self::I64(a), Self::I64(b)) => a $op b,
+                (Self::U64(a), Self::U64(b)) => a $op b,
+                (Self::I128(a), Self::I128(b)) => a $op b,
+                (Self::U128(a), Self::U128(b)) => a $op b,
+                (Self::F32(a), Self::F32(b)) => a $op b,
+                (Self::F64(a), Self::F64(b)) => a $op b,
+                (Self::String(a), Self::String(b)) => a $op b,
+                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
+                (Self::Array(_), _) | (_, Self::Array(_)) => {
+                    panic!("tried to compare array.");
+                }
+                (Self::Lazy(_), _) | (_, Self::Lazy(_)) => {
+                    panic!("tried to compare lazy.");
+                }
+                (Self::Label(_), _) | (_, Self::Label(_)) => {
+                    panic!("tried to compare label.");
+                }
+                _ => panic!(
+                    "tried to compare {} and {}",
+                    self.typeid(),
+                    other.typeid(),
+                ),
+            }
+        }
+    };
 }
 
 impl Value {

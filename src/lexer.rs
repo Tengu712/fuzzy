@@ -1,5 +1,6 @@
 use crate::*;
 use regex::Regex;
+use std::fmt::{Display, Result};
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 pub enum Token {
@@ -31,6 +32,24 @@ pub enum Token {
     Argument(usize),
     Label(String),
 }
+
+impl Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
+        match self {
+            Self::Dot => write!(f, "."),
+            Self::Comma => write!(f, ","),
+            Self::LParen => write!(f, "("),
+            Self::RParen => write!(f, ")"),
+            Self::LBrace => write!(f, "{{"),
+            Self::RBrace => write!(f, "}}"),
+            Self::LBracket => write!(f, "["),
+            Self::RBracket => write!(f, "]"),
+            Self::Top => write!(f, "T"),
+            n => write!(f, "{n:?}"),
+        }
+    }
+}
+
 impl Token {
     fn from(s: &str) -> Self {
         if s == "." {

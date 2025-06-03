@@ -28,7 +28,6 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
-mod symbol;
 mod variable;
 
 use super::{
@@ -72,7 +71,6 @@ impl Default for FunctionMap {
         boolean::insert(&mut map);
         lazy::insert(&mut map);
         numeric::insert(&mut map);
-        symbol::insert(&mut map);
 
         map
     }
