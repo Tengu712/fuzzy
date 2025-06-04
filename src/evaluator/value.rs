@@ -158,8 +158,12 @@ impl Value {
             Self::Lazy(_) => self.to_string(),
             Self::Symbol(n) if env.vr_map.get(n).is_some() => {
                 let v = env.vr_map.get(n).unwrap();
-                let s = v.value.format_in_detail(env);
-                let a = if v.mutable { "<-" } else { "<=" };
+                let s = v.format_in_detail(env);
+                let a = if env.vr_map.is_mutable(n).unwrap() {
+                    "<-"
+                } else {
+                    "<="
+                };
                 format!("{n} {a} {s}")
             }
             _ => format!("{self} ({})", self.typeid()),

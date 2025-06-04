@@ -18,21 +18,11 @@ macro_rules! define_variable_definition {
                 return Err(format!("error: cannot redefine T.").into());
             }
 
-            let n = env.vr_map.get_mut(&o);
-            if !n.as_ref().map(|n| n.mutable).unwrap_or(true) {
-                return Err(format!("error: cannot redefine variable {o}.").into());
-            }
-
             let v = Variable {
                 value: s,
                 mutable: $mutable,
             };
-
-            if let Some(n) = n {
-                *n = v;
-            } else {
-                env.vr_map.insert(o, v);
-            }
+            env.vr_map.insert(o, v)?;
 
             Ok(Value::Nil)
         }

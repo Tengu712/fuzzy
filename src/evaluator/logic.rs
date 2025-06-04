@@ -67,30 +67,34 @@ fn take_verb(
     ty: &TypeId,
 ) -> RResult<Option<String>> {
     if let Some(n) = caches.pop() {
-        Ok(is_verb_name_value(env, caches, ty, n))
-    } else if let Some(Token::Label(_)) = tokens.last() {
-        let Token::Label(n) = tokens.pop().unwrap() else {
-            panic!("failed to extract label.");
-        };
-        if is_verb_name(env, ty, n.as_str()) {
+        return Ok(take_verb_or_cache(env, caches, ty, n));
+    }
+
+    if let Some(Token::Label(label)) = tokens.last() {
+        if is_verb_name(env, ty, label.as_str()) {
+            let Some(Token::Label(n)) = tokens.pop() else {
+                panic!("failed to extract label.");
+            };
             return Ok(Some(n));
         }
-        if let Ok(n) = env.vr_map.get_unwrap(&n) {
-            if let Some(n) = is_verb_name_value(env, caches, ty, n) {
+        if let Some(Value::Symbol(vn)) = env.vr_map.get(label) {
+            if is_verb_name(env, ty, vn.as_str()) {
+                let Value::Symbol(n) = env.vr_map.get_unwrap(label).unwrap() else {
+                    panic!("failed to extract symbol.");
+                };
+                tokens.pop();
                 return Ok(Some(n));
             }
-            caches.pop();
         }
-        tokens.push(Token::Label(n));
-        Ok(None)
-    } else {
-        let n = eval_element(env, tokens)?;
-        let n = is_verb_name_value(env, caches, ty, n);
-        Ok(n)
+        return Ok(None);
     }
+
+    let n = eval_element(env, tokens)?;
+    let n = take_verb_or_cache(env, caches, ty, n);
+    Ok(n)
 }
 
-fn is_verb_name_value(
+fn take_verb_or_cache(
     env: &mut Environment,
     caches: &mut Vec<Value>,
     ty: &TypeId,
