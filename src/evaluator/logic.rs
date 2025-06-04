@@ -9,6 +9,7 @@ pub fn eval_sentence(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
     caches: &mut Vec<Value>,
+    is_toplevel: bool,
 ) -> RResult<Value> {
     let mut s = caches.pop();
     loop {
@@ -18,6 +19,9 @@ pub fn eval_sentence(
         s = Some(eval_clause(env, tokens, caches)?.unwrap_or_default());
         if matches!(tokens.last(), Some(Token::Comma)) {
             tokens.pop();
+            if !is_toplevel {
+                break;
+            }
         }
         if is_sentence_end(tokens, caches) {
             break;
@@ -133,10 +137,14 @@ fn collect_args(
             TypesCheckResult::Err(n) => return Err(n.into()),
             TypesCheckResult::Ok => break,
         }
-        let Some(arg) = eval_clause(env, tokens, caches)? else {
+        if let Some(n) = caches.pop() {
+            args.push(n);
+            continue;
+        }
+        if is_sentence_end(tokens, caches) {
             return Err(format!("error: too few arguments passed to {} on {}.", vn, ty).into());
-        };
-        args.push(arg);
+        }
+        args.push(eval_sentence(env, tokens, caches, false)?);
     }
     args.reverse();
     Ok(args)
