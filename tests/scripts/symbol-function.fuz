@@ -1,0 +1,8 @@
+-- Symbol function test. --
+
+1 '+ 2, !!
+
+'@ => 'at.
+[3 4 5] at 1, !!
+
+"world!" ({ "Hello, " !. '!! } %)

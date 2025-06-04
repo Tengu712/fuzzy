@@ -67,45 +67,45 @@ fn take_verb(
     ty: &TypeId,
 ) -> RResult<Option<String>> {
     if let Some(n) = caches.pop() {
-        if is_verb_name_value(env, ty, &n) {
-            let Value::Symbol(n) = n else {
-                panic!("failed to extract symbol.");
-            };
-            Ok(Some(n))
-        } else {
-            caches.push(n);
-            Ok(None)
-        }
+        Ok(is_verb_name_value(env, caches, ty, n))
     } else if let Some(Token::Label(_)) = tokens.last() {
         let Token::Label(n) = tokens.pop().unwrap() else {
             panic!("failed to extract label.");
         };
         if is_verb_name(env, ty, n.as_str()) {
-            Ok(Some(n))
-        } else {
-            tokens.push(Token::Label(n));
-            Ok(None)
+            return Ok(Some(n));
         }
+        if let Ok(n) = env.vr_map.get_unwrap(&n) {
+            if let Some(n) = is_verb_name_value(env, caches, ty, n) {
+                return Ok(Some(n));
+            }
+            caches.pop();
+        }
+        tokens.push(Token::Label(n));
+        Ok(None)
     } else {
         let n = eval_element(env, tokens)?;
-        if is_verb_name_value(env, ty, &n) {
-            let Value::Symbol(n) = n else {
-                panic!("failed to extract symbol.");
-            };
-            Ok(Some(n))
-        } else {
-            caches.push(n);
-            Ok(None)
-        }
+        let n = is_verb_name_value(env, caches, ty, n);
+        Ok(n)
     }
 }
 
-fn is_verb_name_value(env: &Environment, ty: &TypeId, v: &Value) -> bool {
-    if let Value::Symbol(n) = v {
-        is_verb_name(env, ty, n.as_str())
-    } else {
-        false
+fn is_verb_name_value(
+    env: &mut Environment,
+    caches: &mut Vec<Value>,
+    ty: &TypeId,
+    v: Value,
+) -> Option<String> {
+    if let Value::Symbol(n) = &v {
+        if is_verb_name(env, ty, n.as_str()) {
+            let Value::Symbol(n) = v else {
+                panic!("failed to extract symbol.");
+            };
+            return Some(n);
+        }
     }
+    caches.push(v);
+    None
 }
 
 fn is_verb_name(env: &Environment, ty: &TypeId, vn: &str) -> bool {
