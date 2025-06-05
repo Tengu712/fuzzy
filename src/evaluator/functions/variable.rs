@@ -23,18 +23,39 @@ macro_rules! define_variable_definition {
 
             // TODO: object
             // TODO: self
-            if let Some((private, t, n)) = split_type_and_name(&o) {
+            if let Some((private, trg_ty, trg)) = split_type_and_name(&o) {
+                // function
                 if let Value::Function((ty, tokens)) = s {
+                    // check if it can redefine?
+                    let trg_ty = TypeId::from(trg_ty)?;
+                    if env
+                        .fn_map
+                        .get(&trg_ty, trg)
+                        .map(|n| !n.mutable)
+                        .unwrap_or(false)
+                    {
+                        return Err(format!(
+                            "error: cannot redefine {trg} on {trg_ty} because it's immutable."
+                        )
+                        .into());
+                    }
+
+                    // get types
                     let TypeId::Function(types) = ty else {
                         panic!("failed to extract function.");
                     };
+
+                    // insert
                     let f = Function {
+                        mutable: $mutable,
                         private,
                         types,
                         code: FunctionCode::UserDefined(tokens),
                     };
                     env.fn_map
-                        .insert_user_defined(&TypeId::from(t)?, n.to_string(), f)?;
+                        .insert_user_defined(&trg_ty, trg.to_string(), f)?;
+
+                    // finish
                     return Ok(Value::Nil);
                 }
             }

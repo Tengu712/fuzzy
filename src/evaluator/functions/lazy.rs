@@ -36,8 +36,9 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
     let ts = convert_symbols_to_typeids(o)?;
     let t = TypeId::Function(ts.clone());
 
-    if !env.fn_map.is_defined(&t, "@") {
+    if !env.fn_map.is_defined(None, &t, "@") {
         let n = Function {
+            mutable: false,
             private: false,
             types: ts,
             code: FunctionCode::Builtin(call),

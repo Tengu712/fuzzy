@@ -101,16 +101,22 @@ fn is_clause_end(tokens: &[Token], caches: &[Value]) -> bool {
     ) && caches.is_empty()
 }
 
-fn take_verb_name(env: &mut Environment, tokens: &mut Vec<Token>, ty: &TypeId) -> Option<String> {
+fn take_verb_name(env: &Environment, tokens: &mut Vec<Token>, ty: &TypeId) -> Option<String> {
     match tokens.pop() {
-        Some(Token::Label(vn)) if env.fn_map.is_defined(ty, &vn) => Some(vn),
-        Some(Token::Label(vn)) if is_symbol_value(ty, &vn) => Some(vn),
+        Some(Token::Label(vn)) if is_valid_verb(env, ty, &vn) => Some(vn),
         Some(n) => {
             tokens.push(n);
             None
         }
         None => None,
     }
+}
+
+fn is_valid_verb(env: &Environment, ty: &TypeId, vn: &str) -> bool {
+    is_symbol_value(ty, vn)
+        || env
+            .fn_map
+            .is_defined(env.vr_map.get("##").map(|n| n.typeid()), ty, vn)
 }
 
 fn collect_args(

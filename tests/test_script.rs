@@ -131,7 +131,7 @@ fn test_semicolon() {
 fn test_extend_builtin_type() {
     run(
         "tests/scripts/extend-builtin-type.fuz",
-        "12\n25\nok\n## is 10\n## is 10\n711\n712\n10\n",
+        "12\n25\nok\n## is 10\n## is 10\n711\n712\n20\n",
     );
 }
 
@@ -168,4 +168,14 @@ fn test_wrong_toplevel_self() {
 #[test]
 fn test_wrong_redefine_self() {
     run_wrong("tests/scripts/wrong-redefine-self.fuz");
+}
+
+#[test]
+fn test_wrong_redefine_builtin_function() {
+    run_wrong("tests/scripts/wrong-redefine-builtin-function.fuz");
+}
+
+#[test]
+fn test_wrong_call_private_function() {
+    run_wrong("tests/scripts/wrong-call-private-function.fuz");
 }
