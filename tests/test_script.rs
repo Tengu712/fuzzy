@@ -115,6 +115,14 @@ fn test_while_loop() {
 }
 
 #[test]
+fn test_verb_chain() {
+    run(
+        "tests/scripts/verb-chain.fuz",
+        "1 != 2\n1 != 2\n20\n20\n4\n4\n",
+    );
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

@@ -37,7 +37,7 @@ fn run_inner(env: &mut Environment) -> RResult<bool> {
     tokens.reverse();
     let value = evaluator::eval_block_directly(env, &mut tokens)?
         .pop()
-        .expect("evaluating block result is empty.");
+        .unwrap_or_default();
 
     // print
     println!("{}", value.format_in_detail(env));

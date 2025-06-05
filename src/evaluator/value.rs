@@ -26,43 +26,10 @@ pub enum Value {
     Label(String),
 }
 
-macro_rules! define_inequality_compare {
-    ($fn:ident, $op:tt) => {
-        pub fn $fn(&self, other: &Self) -> bool {
-            match (self, other) {
-                (Self::Nil, Self::Nil) => false,
-                (Self::Top, Self::Top) => false,
-                (Self::I8(a), Self::I8(b)) => a $op b,
-                (Self::U8(a), Self::U8(b)) => a $op b,
-                (Self::I16(a), Self::I16(b)) => a $op b,
-                (Self::U16(a), Self::U16(b)) => a $op b,
-                (Self::I32(a), Self::I32(b)) => a $op b,
-                (Self::U32(a), Self::U32(b)) => a $op b,
-                (Self::I64(a), Self::I64(b)) => a $op b,
-                (Self::U64(a), Self::U64(b)) => a $op b,
-                (Self::I128(a), Self::I128(b)) => a $op b,
-                (Self::U128(a), Self::U128(b)) => a $op b,
-                (Self::F32(a), Self::F32(b)) => a $op b,
-                (Self::F64(a), Self::F64(b)) => a $op b,
-                (Self::String(a), Self::String(b)) => a $op b,
-                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
-                (Self::Array(_), _) | (_, Self::Array(_)) => {
-                    panic!("tried to compare array.");
-                }
-                (Self::Lazy(_), _) | (_, Self::Lazy(_)) => {
-                    panic!("tried to compare lazy.");
-                }
-                (Self::Label(_), _) | (_, Self::Label(_)) => {
-                    panic!("tried to compare label.");
-                }
-                _ => panic!(
-                    "tried to compare {} and {}",
-                    self.typeid(),
-                    other.typeid(),
-                ),
-            }
-        }
-    };
+impl Default for Value {
+    fn default() -> Self {
+        Self::Nil
+    }
 }
 
 impl Display for Value {
@@ -97,9 +64,39 @@ impl Display for Value {
             }
             Self::Lazy(_) => write!(f, "{{}}"),
             Self::Function(_) => write!(f, "{{}}"),
-            Self::Label(_) => panic!("tried to format label."),
+            Self::Label(n) => write!(f, "{n}"),
         }
     }
+}
+
+macro_rules! define_inequality_compare {
+    ($fn:ident, $op:tt) => {
+        pub fn $fn(&self, other: &Self) -> bool {
+            match (self, other) {
+                (Self::Nil, Self::Nil) => false,
+                (Self::Top, Self::Top) => false,
+                (Self::I8(a), Self::I8(b)) => a $op b,
+                (Self::U8(a), Self::U8(b)) => a $op b,
+                (Self::I16(a), Self::I16(b)) => a $op b,
+                (Self::U16(a), Self::U16(b)) => a $op b,
+                (Self::I32(a), Self::I32(b)) => a $op b,
+                (Self::U32(a), Self::U32(b)) => a $op b,
+                (Self::I64(a), Self::I64(b)) => a $op b,
+                (Self::U64(a), Self::U64(b)) => a $op b,
+                (Self::I128(a), Self::I128(b)) => a $op b,
+                (Self::U128(a), Self::U128(b)) => a $op b,
+                (Self::F32(a), Self::F32(b)) => a $op b,
+                (Self::F64(a), Self::F64(b)) => a $op b,
+                (Self::String(a), Self::String(b)) => a $op b,
+                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
+                _ => panic!(
+                    "tried to compare {} and {}",
+                    self.typeid(),
+                    other.typeid(),
+                ),
+            }
+        }
+    };
 }
 
 impl Value {
@@ -146,7 +143,7 @@ impl Value {
             Self::Array(_) => TypeId::Array,
             Self::Lazy(_) => TypeId::Lazy,
             Self::Function((n, _)) => n.clone(),
-            Self::Label(_) => panic!("tried to get type of label."),
+            Self::Label(n) => panic!("tried to get typeid of label '{n}'."),
         }
     }
 
@@ -158,11 +155,21 @@ impl Value {
             Self::Lazy(_) => self.to_string(),
             Self::Symbol(n) if env.vr_map.get(n).is_some() => {
                 let v = env.vr_map.get(n).unwrap();
-                let s = v.value.format_in_detail(env);
-                let a = if v.mutable { "<-" } else { "<=" };
+                let s = v.format_in_detail(env);
+                let a = if env.vr_map.is_mutable(n).unwrap() {
+                    "<-"
+                } else {
+                    "<="
+                };
                 format!("{n} {a} {s}")
             }
-            Self::Label(_) => panic!("tried to format label."),
+            Self::Label(n) => {
+                if let Ok(n) = env.vr_map.get_unwrap(n) {
+                    n.format_in_detail(env)
+                } else {
+                    format!("{n} (unbound label)")
+                }
+            }
             _ => format!("{self} ({})", self.typeid()),
         }
     }
@@ -192,9 +199,6 @@ impl Value {
                         .all(|(x, y)| x.typeid() == y.typeid() && x.equal(y))
             }
             (Self::Lazy(a), Self::Lazy(b)) => a == b,
-            (Self::Label(_), _) | (_, Self::Label(_)) => {
-                panic!("tried to compare label.");
-            }
             _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
         }
     }

@@ -24,12 +24,14 @@ fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 
 fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Array);
-    Ok(s.first().cloned().unwrap_or(Value::Nil))
+    // OPTIMIZE: remove clone.
+    Ok(s.first().cloned().unwrap_or_default())
 }
 
 fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Array);
-    Ok(s.last().cloned().unwrap_or(Value::Nil))
+    // OPTIMIZE: remove clone.
+    Ok(s.last().cloned().unwrap_or_default())
 }
 
 fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
@@ -41,7 +43,8 @@ fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
         let i = o + s.len() as i32;
         if i >= 0 { s.get(i as usize) } else { None }
     };
-    Ok(n.cloned().unwrap_or(Value::Nil))
+    // OPTIMIZE: remove clone.
+    Ok(n.cloned().unwrap_or_default())
 }
 
 fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
