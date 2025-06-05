@@ -123,6 +123,11 @@ fn test_verb_chain() {
 }
 
 #[test]
+fn test_semicolon() {
+    run("tests/scripts/semicolon.fuz", "3\n3\n6\n6\n7\n7\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
