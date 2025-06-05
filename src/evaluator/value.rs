@@ -1,5 +1,5 @@
 use super::{Environment, types::TypeId};
-use crate::lexer::Token;
+use crate::{RResult, lexer::Token};
 use std::fmt::{Display, Result};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -23,7 +23,6 @@ pub enum Value {
     Array(Vec<Value>),
     Lazy(Vec<Token>),
     Function((TypeId, Vec<Token>)),
-    Label(String),
 }
 
 impl Default for Value {
@@ -64,7 +63,6 @@ impl Display for Value {
             }
             Self::Lazy(_) => write!(f, "{{}}"),
             Self::Function(_) => write!(f, "{{}}"),
-            Self::Label(n) => write!(f, "{n}"),
         }
     }
 }
@@ -100,24 +98,24 @@ macro_rules! define_inequality_compare {
 }
 
 impl Value {
-    pub fn from(token: Token) -> Self {
+    pub fn from(env: &Environment, token: Token) -> RResult<Self> {
         match token {
-            Token::Top => Self::Top,
-            Token::I8(n) => Self::I8(n),
-            Token::U8(n) => Self::U8(n),
-            Token::I16(n) => Self::I16(n),
-            Token::U16(n) => Self::U16(n),
-            Token::I32(n) => Self::I32(n),
-            Token::U32(n) => Self::U32(n),
-            Token::I64(n) => Self::I64(n),
-            Token::U64(n) => Self::U64(n),
-            Token::I128(n) => Self::I128(n),
-            Token::U128(n) => Self::U128(n),
-            Token::F32(n) => Self::F32(n),
-            Token::F64(n) => Self::F64(n),
-            Token::String(n) => Self::String(n),
-            Token::Symbol(n) => Self::Symbol(n),
-            Token::Label(n) => Self::Label(n),
+            Token::Top => Ok(Self::Top),
+            Token::I8(n) => Ok(Self::I8(n)),
+            Token::U8(n) => Ok(Self::U8(n)),
+            Token::I16(n) => Ok(Self::I16(n)),
+            Token::U16(n) => Ok(Self::U16(n)),
+            Token::I32(n) => Ok(Self::I32(n)),
+            Token::U32(n) => Ok(Self::U32(n)),
+            Token::I64(n) => Ok(Self::I64(n)),
+            Token::U64(n) => Ok(Self::U64(n)),
+            Token::I128(n) => Ok(Self::I128(n)),
+            Token::U128(n) => Ok(Self::U128(n)),
+            Token::F32(n) => Ok(Self::F32(n)),
+            Token::F64(n) => Ok(Self::F64(n)),
+            Token::String(n) => Ok(Self::String(n)),
+            Token::Symbol(n) => Ok(Self::Symbol(n)),
+            Token::Label(n) => env.vr_map.get_unwrap(&n),
             _ => panic!("tried to create value from non-atom token."),
         }
     }
@@ -143,7 +141,6 @@ impl Value {
             Self::Array(_) => TypeId::Array,
             Self::Lazy(_) => TypeId::Lazy,
             Self::Function((n, _)) => n.clone(),
-            Self::Label(n) => panic!("tried to get typeid of label '{n}'."),
         }
     }
 
@@ -162,13 +159,6 @@ impl Value {
                     "<="
                 };
                 format!("{n} {a} {s}")
-            }
-            Self::Label(n) => {
-                if let Ok(n) = env.vr_map.get_unwrap(n) {
-                    n.format_in_detail(env)
-                } else {
-                    format!("{n} (unbound label)")
-                }
             }
             _ => format!("{self} ({})", self.typeid()),
         }
