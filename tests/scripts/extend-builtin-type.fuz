@@ -1,0 +1,4 @@
+-- Builtin type extension test. --
+
+{ $ + 1 } : ['i32], => 'incr.
+11 incr !!
