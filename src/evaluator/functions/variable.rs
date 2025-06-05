@@ -14,6 +14,9 @@ macro_rules! define_variable_definition {
     ($fn: ident, $name: expr, $mutable: expr) => {
         fn $fn(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
             let o = pop_extract_variant!(args, Symbol);
+            if o == "##" {
+                return Err(format!("error: cannot redefine ##.").into());
+            }
             if o == "T" {
                 return Err(format!("error: cannot redefine T.").into());
             }

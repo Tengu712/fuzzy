@@ -128,6 +128,11 @@ fn test_semicolon() {
 }
 
 #[test]
+fn test_extend_builtin_type() {
+    run("tests/scripts/extend-builtin-type.fuz", "12\n25\nok\n## is 10\n## is 10\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

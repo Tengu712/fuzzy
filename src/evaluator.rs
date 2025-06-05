@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct EnterLazyParams {
     pub slf: Option<value::Value>,
-    pub args: Vec<value::Value>,
+    pub args: Option<Vec<value::Value>>,
 }
 
 #[derive(Default)]
@@ -22,20 +22,28 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn prepare_block_scope(&mut self, params: Option<EnterLazyParams>) {
+    pub fn prepare_block_scope(&mut self, params: EnterLazyParams) {
         self.fn_map.push();
         self.vr_map.push();
-        if let Some(n) = params {
-            self.slfs.push(n.slf);
-            self.args.push(n.args);
+        if let Some(n) = params.slf {
+            let n = variable::Variable {
+                mutable: false,
+                value: n,
+            };
+            let _ = self.vr_map.insert("##".to_string(), n);
+        }
+        if let Some(n) = params.args {
+            self.args.push(n);
         }
     }
 
-    pub fn cleanup_block_scope(&mut self, ret_from_lazy: bool) {
+    pub fn cleanup_block_scope(&mut self, pop_slfs: bool, pop_args: bool) {
         self.fn_map.pop();
         self.vr_map.pop();
-        if ret_from_lazy {
+        if pop_slfs {
             self.slfs.pop();
+        }
+        if pop_args {
             self.args.pop();
         }
     }
@@ -61,24 +69,25 @@ pub fn parse_command_line_args(args: Vec<String>) -> Vec<value::Value> {
 ///
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
-/// * `args` - The list of arguments passed to the block.
+/// * `params` - The parameters passed to the block.
 ///
 /// Evaluates all statements and returns their results.
 /// If the last statement ends with `.`, `Value::Nil` is appended to the results.
 ///
 /// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
 ///
-/// NOTE: Only top-level and lazy blocks should be passed `Some` for `args`.
+/// NOTE: Only top-level and lazy blocks should be passed `Some` for `params.args`.
 ///       In other words, evaluating an immediate block doesn't affect the argument list's stack.
 pub fn eval_block(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
-    params: Option<EnterLazyParams>,
+    params: EnterLazyParams,
 ) -> RResult<Vec<value::Value>> {
-    let b = params.is_some();
+    let pop_slfs = params.slf.is_some();
+    let pop_args = params.args.is_some();
     env.prepare_block_scope(params);
     let results = eval_block_directly(env, tokens);
-    env.cleanup_block_scope(b);
+    env.cleanup_block_scope(pop_slfs, pop_args);
     results
 }
 

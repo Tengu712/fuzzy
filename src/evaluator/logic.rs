@@ -172,8 +172,11 @@ fn appplicate(
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
         FunctionCode::UserDefined(mut tokens) => {
-            let params = EnterLazyParams { slf: Some(s), args };
-            let mut results = eval_block(env, &mut tokens, Some(params))?;
+            let params = EnterLazyParams {
+                slf: Some(s),
+                args: Some(args),
+            };
+            let mut results = eval_block(env, &mut tokens, params)?;
             let result = results.pop().unwrap_or_default();
             Ok(result)
         }
@@ -200,7 +203,9 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::Semicolon) => panic!("Token::Semicolon passed to eval_element."),
         Some(Token::LParen) => {
             let mut n = extract_brackets_content(tokens, Token::LParen, Token::RParen)?;
-            let result = eval_block(env, &mut n, None)?.pop().unwrap_or_default();
+            let result = eval_block(env, &mut n, EnterLazyParams::default())?
+                .pop()
+                .unwrap_or_default();
             Ok(result)
         }
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
@@ -211,7 +216,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
         Some(Token::LBracket) => {
             let mut n = extract_brackets_content(tokens, Token::LBracket, Token::RBracket)?;
-            let results = eval_block(env, &mut n, None)?;
+            let results = eval_block(env, &mut n, EnterLazyParams::default())?;
             Ok(Value::Array(results))
         }
         Some(Token::RBracket) => Err("error: unmatched ']' found.".into()),

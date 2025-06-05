@@ -69,9 +69,10 @@ fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value>
 }
 
 fn eval(env: &mut Environment, tokens: &mut Vec<Token>, args: Vec<Value>) -> RResult<Value> {
-    let params = EnterLazyParams { slf: None, args };
-    let result = eval_block(env, tokens, Some(params))?
-        .pop()
-        .unwrap_or_default();
+    let params = EnterLazyParams {
+        slf: None,
+        args: Some(args),
+    };
+    let result = eval_block(env, tokens, params)?.pop().unwrap_or_default();
     Ok(result)
 }

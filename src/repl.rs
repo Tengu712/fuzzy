@@ -7,8 +7,11 @@ use std::io::{self, Write};
 
 pub fn run() {
     let mut env = Environment::default();
-    let params = EnterLazyParams::default();
-    env.prepare_block_scope(Some(params));
+    let params = EnterLazyParams {
+        slf: None,
+        args: Some(vec![]),
+    };
+    env.prepare_block_scope(params);
     loop {
         match run_inner(&mut env) {
             Ok(true) => (),
