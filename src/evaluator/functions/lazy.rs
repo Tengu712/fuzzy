@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn insert(fm: &mut FunctionMap) {
+pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
         &TypeId::Lazy,
         vec![
@@ -13,18 +13,18 @@ pub fn insert(fm: &mut FunctionMap) {
 
 fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
-    eval(env, &mut s, Some(Vec::new()))
+    eval(env, &mut s, Vec::new())
 }
 
 fn while_loop(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, Lazy);
     loop {
-        let r = eval(env, &mut s.clone(), Some(Vec::new()))?;
+        let r = eval(env, &mut s.clone(), Vec::new())?;
         if r == Value::Nil {
             break;
         }
-        eval(env, &mut o.clone(), Some(vec![r]))?;
+        eval(env, &mut o.clone(), vec![r])?;
     }
     Ok(Value::Nil)
 }
@@ -37,7 +37,13 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
     let t = TypeId::Function(ts.clone());
 
     if !env.fn_map.is_defined(&t, "@") {
-        env.fn_map.insert_all(&t, vec![builtin_fn!("@", ts, call)]);
+        let n = Function {
+            private: false,
+            types: ts,
+            code: FunctionCode::Builtin(call),
+        };
+        env.fn_map.insert_new_type(t.clone());
+        env.fn_map.insert_user_defined(&t, "@".to_string(), n)?;
         variable::insert(&mut env.fn_map, &t);
     }
 
@@ -59,14 +65,14 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Function);
     args.reverse();
-    eval(env, &mut s.1, Some(args))
+    eval(env, &mut s.1, args)
 }
 
-fn eval(
-    env: &mut Environment,
-    tokens: &mut Vec<Token>,
-    args: Option<Vec<Value>>,
-) -> RResult<Value> {
-    let result = eval_block(env, tokens, args)?.pop().unwrap_or_default();
+fn eval(env: &mut Environment, tokens: &mut Vec<Token>, args: Vec<Value>) -> RResult<Value> {
+    let params = EnterLazyParams {
+        slf: None,
+        args: Some(args),
+    };
+    let result = eval_block(env, tokens, params)?.pop().unwrap_or_default();
     Ok(result)
 }

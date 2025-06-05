@@ -1,13 +1,17 @@
 use crate::{
     RResult,
-    evaluator::{self, Environment},
+    evaluator::{self, EnterLazyParams, Environment},
     lexer,
 };
 use std::io::{self, Write};
 
 pub fn run() {
     let mut env = Environment::default();
-    env.prepare_block_scope(Some(Vec::new()));
+    let params = EnterLazyParams {
+        slf: None,
+        args: Some(vec![]),
+    };
+    env.prepare_block_scope(params);
     loop {
         match run_inner(&mut env) {
             Ok(true) => (),

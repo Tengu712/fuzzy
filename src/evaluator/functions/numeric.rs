@@ -47,7 +47,7 @@ macro_rules! insert_cast {
     };
 }
 
-pub fn insert(maps: &mut FunctionMap) {
+pub fn insert(maps: &mut FunctionMapStack) {
     for_all_numeric_types!(insert_numeric_function, maps, add, +);
     for_all_numeric_types!(insert_numeric_function, maps, sub, -);
     for_all_numeric_types!(insert_numeric_function, maps, mul, *);

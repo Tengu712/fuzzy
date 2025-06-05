@@ -62,4 +62,15 @@ impl VariableMapStack {
             Ok(())
         }
     }
+
+    pub fn insert_self(&mut self, value: Value) {
+        let n = Variable {
+            mutable: true,
+            value,
+        };
+        self.map
+            .last_mut()
+            .expect("variable map stack is empty.")
+            .insert("##".to_string(), n);
+    }
 }

@@ -8,25 +8,36 @@ use crate::{lexer::*, *};
 use std::collections::HashMap;
 
 #[derive(Default)]
+pub struct EnterLazyParams {
+    pub slf: Option<value::Value>,
+    pub args: Option<Vec<value::Value>>,
+}
+
+#[derive(Default)]
 pub struct Environment {
-    fn_map: functions::FunctionMap,
+    fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
     args: Vec<Vec<value::Value>>,
 }
 
 impl Environment {
-    pub fn prepare_block_scope(&mut self, args: Option<Vec<value::Value>>) {
-        if let Some(n) = args {
+    pub fn prepare_block_scope(&mut self, params: EnterLazyParams) {
+        self.fn_map.push();
+        self.vr_map.push();
+        if let Some(n) = params.slf {
+            self.vr_map.insert_self(n);
+        }
+        if let Some(n) = params.args {
             self.args.push(n);
         }
-        self.vr_map.push();
     }
 
-    pub fn cleanup_block_scope(&mut self, should_pop_args: bool) {
-        if should_pop_args {
+    pub fn cleanup_block_scope(&mut self, pop_args: bool) {
+        self.fn_map.pop();
+        self.vr_map.pop();
+        if pop_args {
             self.args.pop();
         }
-        self.vr_map.pop();
     }
 
     fn get_argument(&self, i: usize) -> Option<value::Value> {
@@ -50,24 +61,24 @@ pub fn parse_command_line_args(args: Vec<String>) -> Vec<value::Value> {
 ///
 /// * `env` - The current environment.
 /// * `tokens` - All tokens in the block in reverse order.
-/// * `args` - The list of arguments passed to the block.
+/// * `params` - The parameters passed to the block.
 ///
 /// Evaluates all statements and returns their results.
 /// If the last statement ends with `.`, `Value::Nil` is appended to the results.
 ///
 /// If the result is `Ok`, it is guaranteed that all `tokens` are consumed.
 ///
-/// NOTE: Only top-level and lazy blocks should be passed `Some` for `args`.
+/// NOTE: Only top-level and lazy blocks should be passed `Some` for `params.args`.
 ///       In other words, evaluating an immediate block doesn't affect the argument list's stack.
 pub fn eval_block(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
-    args: Option<Vec<value::Value>>,
+    params: EnterLazyParams,
 ) -> RResult<Vec<value::Value>> {
-    let should_pop_args = args.is_some();
-    env.prepare_block_scope(args);
+    let pop_args = params.args.is_some();
+    env.prepare_block_scope(params);
     let results = eval_block_directly(env, tokens);
-    env.cleanup_block_scope(should_pop_args);
+    env.cleanup_block_scope(pop_args);
     results
 }
 

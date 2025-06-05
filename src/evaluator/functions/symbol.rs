@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn insert(fm: &mut FunctionMap) {
+pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
         &TypeId::Symbol,
         vec![builtin_fn!("$", vec![], symbol_value)],
