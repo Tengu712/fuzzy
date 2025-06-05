@@ -17,7 +17,6 @@ pub struct EnterLazyParams {
 pub struct Environment {
     fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
-    slfs: Vec<Option<value::Value>>,
     args: Vec<Vec<value::Value>>,
 }
 
@@ -26,23 +25,16 @@ impl Environment {
         self.fn_map.push();
         self.vr_map.push();
         if let Some(n) = params.slf {
-            let n = variable::Variable {
-                mutable: false,
-                value: n,
-            };
-            let _ = self.vr_map.insert("##".to_string(), n);
+            self.vr_map.insert_self(n);
         }
         if let Some(n) = params.args {
             self.args.push(n);
         }
     }
 
-    pub fn cleanup_block_scope(&mut self, pop_slfs: bool, pop_args: bool) {
+    pub fn cleanup_block_scope(&mut self, pop_args: bool) {
         self.fn_map.pop();
         self.vr_map.pop();
-        if pop_slfs {
-            self.slfs.pop();
-        }
         if pop_args {
             self.args.pop();
         }
@@ -83,11 +75,10 @@ pub fn eval_block(
     tokens: &mut Vec<Token>,
     params: EnterLazyParams,
 ) -> RResult<Vec<value::Value>> {
-    let pop_slfs = params.slf.is_some();
     let pop_args = params.args.is_some();
     env.prepare_block_scope(params);
     let results = eval_block_directly(env, tokens);
-    env.cleanup_block_scope(pop_slfs, pop_args);
+    env.cleanup_block_scope(pop_args);
     results
 }
 

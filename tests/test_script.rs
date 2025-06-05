@@ -129,7 +129,10 @@ fn test_semicolon() {
 
 #[test]
 fn test_extend_builtin_type() {
-    run("tests/scripts/extend-builtin-type.fuz", "12\n25\nok\n## is 10\n## is 10\n");
+    run(
+        "tests/scripts/extend-builtin-type.fuz",
+        "12\n25\nok\n## is 10\n## is 10\n711\n712\n10\n",
+    );
 }
 
 #[test]
@@ -155,4 +158,14 @@ fn test_undefined_value_of_symbol_object() {
 #[test]
 fn test_wrong_cast() {
     run_wrong("tests/scripts/wrong-cast.fuz");
+}
+
+#[test]
+fn test_wrong_toplevel_self() {
+    run_wrong("tests/scripts/wrong-toplevel-self.fuz");
+}
+
+#[test]
+fn test_wrong_redefine_self() {
+    run_wrong("tests/scripts/wrong-redefine-self.fuz");
 }
