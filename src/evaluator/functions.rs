@@ -3,6 +3,7 @@ macro_rules! builtin_fn {
         (
             $name.to_string(),
             Function {
+                mutable: false,
                 private: false,
                 types: $types,
                 code: FunctionCode::Builtin($fn),
@@ -54,6 +55,7 @@ pub enum TypesCheckResult {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
+    mutable: bool,
     private: bool,
     types: Vec<TypeId>,
     code: FunctionCode,
@@ -101,8 +103,10 @@ impl FunctionMapStack {
         self.map.iter().rev().find_map(|n| n.get(ty)?.get(vn))
     }
 
-    pub fn is_defined(&self, ty: &TypeId, vn: &str) -> bool {
-        self.get(ty, vn).is_some()
+    pub fn is_defined(&self, sty: Option<TypeId>, ty: &TypeId, vn: &str) -> bool {
+        self.get(ty, vn)
+            .map(|n| !n.private || sty.map(|n| &n == ty).unwrap_or(false))
+            .unwrap_or(false)
     }
 
     pub fn check_types(&self, ty: &TypeId, vn: &str, values: &[Value]) -> TypesCheckResult {
