@@ -21,8 +21,18 @@ macro_rules! define_variable_definition {
             // TODO: object
             // TODO: self
             if let Some((private, t, n)) = split_type_and_name(&o) {
-                if matches!(s.typeid(), TypeId::Function(_)) {
-                    // TODO:
+                if let Value::Function((ty, tokens)) = s {
+                    let TypeId::Function(types) = ty else {
+                        panic!("failed to extract function.");
+                    };
+                    let f = Function {
+                        private,
+                        types,
+                        code: FunctionCode::UserDefined(tokens),
+                    };
+                    env.fn_map
+                        .insert_user_defined(&TypeId::from(t)?, n.to_string(), f)?;
+                    return Ok(Value::Nil);
                 }
             }
 

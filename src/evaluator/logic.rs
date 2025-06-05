@@ -171,6 +171,11 @@ fn appplicate(
 ) -> RResult<Value> {
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
+        FunctionCode::UserDefined(mut tokens) => {
+            let mut results = eval_block(env, &mut tokens, Some(args))?;
+            let result = results.pop().unwrap_or_default();
+            Ok(result)
+        }
     }
 }
 

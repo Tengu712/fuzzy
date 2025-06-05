@@ -63,6 +63,7 @@ pub struct Function {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCode {
     Builtin(BuiltinFunctionCode),
+    UserDefined(Vec<Token>),
 }
 
 #[derive(Default)]
