@@ -88,7 +88,8 @@ pub fn eval_block_directly(
     let mut caches = Vec::new();
     let mut dotted = false;
     while !tokens.is_empty() || !caches.is_empty() {
-        values.push(logic::eval_sentence(env, tokens, &mut caches, true)?);
+        let n = logic::eval_sentence(env, tokens, &mut caches, true)?.unwrap_or_default();
+        values.push(n);
         dotted = matches!(tokens.last(), Some(Token::Dot)) && tokens.pop().is_some();
     }
     if dotted {

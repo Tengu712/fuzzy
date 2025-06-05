@@ -10,7 +10,7 @@ pub fn eval_sentence(
     tokens: &mut Vec<Token>,
     caches: &mut Vec<Value>,
     is_toplevel: bool,
-) -> RResult<Value> {
+) -> RResult<Option<Value>> {
     let mut s = caches.pop();
     loop {
         if let Some(s) = s.take() {
@@ -32,7 +32,7 @@ pub fn eval_sentence(
             break;
         }
     }
-    Ok(s.unwrap_or_default())
+    Ok(s)
 }
 
 fn is_sentence_end(tokens: &[Token], caches: &[Value]) -> bool {
@@ -141,10 +141,10 @@ fn collect_args(
             args.push(n);
             continue;
         }
-        if is_sentence_end(tokens, caches) {
+        let Some(n) = eval_sentence(env, tokens, caches, false)? else {
             return Err(format!("error: too few arguments passed to {} on {}.", vn, ty).into());
-        }
-        args.push(eval_sentence(env, tokens, caches, false)?);
+        };
+        args.push(n);
     }
     args.reverse();
     Ok(args)
