@@ -1,6 +1,6 @@
 use super::{super::variable::Variable, *};
 
-pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
+pub fn insert(fm: &mut FunctionMapStack, ty: &TypeId) {
     fm.insert_all(
         ty,
         vec![
@@ -18,6 +18,14 @@ macro_rules! define_variable_definition {
                 return Err(format!("error: cannot redefine T.").into());
             }
 
+            // TODO: object
+            // TODO: self
+            if let Some((private, t, n)) = split_type_and_name(&o) {
+                if matches!(s.typeid(), TypeId::Function(_)) {
+                    // TODO:
+                }
+            }
+
             let v = Variable {
                 value: s,
                 mutable: $mutable,
@@ -30,3 +38,13 @@ macro_rules! define_variable_definition {
 }
 define_variable_definition!(define_mutable, "->", true);
 define_variable_definition!(define_immutable, "=>", false);
+
+fn split_type_and_name(n: &str) -> Option<(bool, &str, &str)> {
+    if let Some((n, m)) = n.split_once("::") {
+        Some((true, n, m))
+    } else if let Some((n, m)) = n.split_once(":") {
+        Some((false, n, m))
+    } else {
+        None
+    }
+}

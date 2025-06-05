@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Environment {
-    fn_map: functions::FunctionMap,
+    fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
     args: Vec<Vec<value::Value>>,
 }
@@ -19,6 +19,7 @@ impl Environment {
         if let Some(n) = args {
             self.args.push(n);
         }
+        self.fn_map.push();
         self.vr_map.push();
     }
 
@@ -26,6 +27,7 @@ impl Environment {
         if should_pop_args {
             self.args.pop();
         }
+        self.fn_map.pop();
         self.vr_map.pop();
     }
 

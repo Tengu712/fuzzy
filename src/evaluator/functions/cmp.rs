@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn insert(fm: &mut FunctionMap, ty: &TypeId) {
+pub fn insert(fm: &mut FunctionMapStack, ty: &TypeId) {
     fm.insert_all(
         ty,
         vec![

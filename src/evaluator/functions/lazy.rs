@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn insert(fm: &mut FunctionMap) {
+pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
         &TypeId::Lazy,
         vec![
@@ -37,7 +37,13 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
     let t = TypeId::Function(ts.clone());
 
     if !env.fn_map.is_defined(&t, "@") {
-        env.fn_map.insert_all(&t, vec![builtin_fn!("@", ts, call)]);
+        let n = Function {
+            private: false,
+            types: ts,
+            code: FunctionCode::Builtin(call),
+        };
+        env.fn_map.insert_new_type(t.clone());
+        env.fn_map.insert_user_defined(&t, "@".to_string(), n)?;
         variable::insert(&mut env.fn_map, &t);
     }
 

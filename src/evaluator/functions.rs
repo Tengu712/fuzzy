@@ -1,6 +1,13 @@
 macro_rules! builtin_fn {
     ($name: expr, $types: expr, $fn: expr) => {
-        ($name.to_string(), ($types, FunctionCode::Builtin($fn)))
+        (
+            $name.to_string(),
+            Function {
+                private: false,
+                types: $types,
+                code: FunctionCode::Builtin($fn),
+            },
+        )
     };
 }
 
@@ -39,7 +46,6 @@ use super::{
 use crate::RResult;
 
 type BuiltinFunctionCode = fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>;
-type Function = (Vec<TypeId>, FunctionCode);
 
 pub enum TypesCheckResult {
     Undecided,
@@ -48,47 +54,64 @@ pub enum TypesCheckResult {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    private: bool,
+    types: Vec<TypeId>,
+    code: FunctionCode,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionCode {
     Builtin(BuiltinFunctionCode),
 }
 
-pub struct FunctionMap {
-    map: HashMap<TypeId, HashMap<String, Function>>,
+#[derive(Default)]
+pub struct FunctionMapStack {
+    map: Vec<HashMap<TypeId, HashMap<String, Function>>>,
 }
 
-impl Default for FunctionMap {
-    fn default() -> Self {
-        let mut map = FunctionMap {
-            map: HashMap::new(),
-        };
-
-        for n in ALL_PREMITIVE_TYPES {
-            map.map.insert(n.clone(), HashMap::new());
-            cmp::insert(&mut map, n);
-            print::insert(&mut map, n);
-            variable::insert(&mut map, n);
+impl FunctionMapStack {
+    pub fn push(&mut self) {
+        if !self.map.is_empty() {
+            self.map.push(HashMap::new());
+            return;
         }
-        array::insert(&mut map);
-        boolean::insert(&mut map);
-        lazy::insert(&mut map);
-        numeric::insert(&mut map);
-        symbol::insert(&mut map);
 
-        map
+        self.map.push(HashMap::new());
+        for n in ALL_PREMITIVE_TYPES {
+            self.map
+                .last_mut()
+                .unwrap()
+                .insert(n.clone(), HashMap::new());
+            cmp::insert(self, n);
+            print::insert(self, n);
+            variable::insert(self, n);
+        }
+        array::insert(self);
+        boolean::insert(self);
+        lazy::insert(self);
+        numeric::insert(self);
+        symbol::insert(self);
     }
-}
 
-impl FunctionMap {
-    pub fn is_defined(&self, ty: &TypeId, name: &str) -> bool {
-        self.map
-            .get(ty)
-            .map(|n| n.contains_key(name))
-            .unwrap_or(false)
+    pub fn pop(&mut self) {
+        self.map.pop();
     }
 
-    pub fn check_types(&self, ty: &TypeId, name: &str, values: &[Value]) -> TypesCheckResult {
+    fn get(&self, ty: &TypeId, vn: &str) -> Option<&Function> {
+        self.map.iter().rev().find_map(|n| n.get(ty)?.get(vn))
+    }
+
+    pub fn is_defined(&self, ty: &TypeId, vn: &str) -> bool {
+        self.get(ty, vn).is_some()
+    }
+
+    pub fn check_types(&self, ty: &TypeId, vn: &str, values: &[Value]) -> TypesCheckResult {
         let len = values.len();
-        let expected = &self.get(ty, name).0;
+        let expected = &self
+            .get(ty, vn)
+            .unwrap_or_else(|| panic!("{vn} on {ty} not defined."))
+            .types;
 
         if len > expected.len() {
             panic!("too many arguments passed.");
@@ -102,7 +125,7 @@ impl FunctionMap {
         {
             if &n != m && m != &TypeId::Any {
                 return TypesCheckResult::Err(format!(
-                    "error: {name} on {ty} expects {m} for #{i} but got {n}."
+                    "error: {vn} on {ty} expects {m} for #{i} but got {n}."
                 ));
             }
         }
@@ -114,23 +137,51 @@ impl FunctionMap {
         }
     }
 
-    pub fn get_code(&self, ty: &TypeId, name: &str) -> FunctionCode {
-        self.get(ty, name).1.clone()
+    pub fn get_code(&self, ty: &TypeId, vn: &str) -> FunctionCode {
+        self.get(ty, vn)
+            .unwrap_or_else(|| panic!("{vn} on {ty} not defined."))
+            .code
+            .clone()
     }
 
-    fn get(&self, ty: &TypeId, name: &str) -> &Function {
-        self.map
-            .get(ty)
-            .unwrap_or_else(|| panic!("no function defined on {ty}."))
-            .get(name)
-            .unwrap_or_else(|| panic!("function {name} not defined on {ty}."))
+    fn insert_new_type(&mut self, ty: TypeId) {
+        if !self.map.iter().any(|n| n.contains_key(&ty)) {
+            self.map
+                .last_mut()
+                .expect("funciton map stack is empty.")
+                .insert(ty, HashMap::new());
+        }
+    }
+
+    fn insert_user_defined(&mut self, ty: &TypeId, vn: String, fun: Function) -> RResult<()> {
+        if !self.map.iter().any(|n| n.contains_key(ty)) {
+            return Err(format!("error: the type {ty} is not defined.").into());
+        }
+        if let Some(n) = self
+            .map
+            .iter_mut()
+            .rev()
+            .find_map(|n| n.get_mut(ty)?.get_mut(&vn))
+        {
+            *n = fun;
+        } else {
+            let n = self.map.last_mut().expect("function map stack is empty.");
+            if !n.contains_key(ty) {
+                n.insert(ty.clone(), HashMap::new());
+            }
+            n.get_mut(ty).unwrap().insert(vn, fun);
+        }
+        Ok(())
     }
 
     fn insert_all(&mut self, ty: &TypeId, funs: Vec<(String, Function)>) {
-        if !self.map.contains_key(ty) {
-            self.map.insert(ty.clone(), HashMap::new());
-        }
-        self.map.get_mut(ty).unwrap().reserve(funs.len());
-        self.map.get_mut(ty).unwrap().extend(funs);
+        let n = self
+            .map
+            .last_mut()
+            .expect("function map stack is empty.")
+            .get_mut(ty)
+            .unwrap_or_else(|| panic!("function map for {ty} not inserted."));
+        n.reserve(funs.len());
+        n.extend(funs);
     }
 }
