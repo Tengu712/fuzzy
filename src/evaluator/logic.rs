@@ -20,11 +20,6 @@ pub fn eval_sentence(
 
         // eval clause
         s = eval_clause(env, tokens, caches)?;
-        match s.take() {
-            Some(Value::Label(n)) => s = env.vr_map.get_unwrap(&n).ok().or(Some(Value::Label(n))),
-            Some(n) => s = Some(n),
-            None => s = None,
-        }
 
         // consume comma
         //
@@ -61,8 +56,8 @@ pub fn eval_sentence(
         //       - Otherwise, the sentence ends here, meaning `V'` is considered
         //         the subject of the next sentence.
         let ty = &s.as_ref().unwrap().typeid();
-        if let Some(vn) = take_verb_name(env, tokens, caches, ty)? {
-            caches.push(Value::Label(vn));
+        if let Some(vn) = take_verb_name(env, tokens, ty) {
+            tokens.push(Token::Label(vn));
         } else {
             break;
         }
@@ -89,10 +84,8 @@ fn eval_clause(
         return Ok(Some(s));
     }
 
-    let s = expand_label(env, s)?;
-
     let ty = &s.typeid();
-    let Some(vn) = take_verb_name(env, tokens, caches, ty)? else {
+    let Some(vn) = take_verb_name(env, tokens, ty) else {
         return Ok(Some(s));
     };
 
@@ -108,23 +101,16 @@ fn is_clause_end(tokens: &[Token], caches: &[Value]) -> bool {
     ) && caches.is_empty()
 }
 
-fn take_verb_name(
-    env: &mut Environment,
-    tokens: &mut Vec<Token>,
-    caches: &mut Vec<Value>,
-    ty: &TypeId,
-) -> RResult<Option<String>> {
-    match pop_cache_or_eval_element(env, tokens, caches)? {
-        Value::Label(vn) if is_verb_name(env, ty, vn.as_str()) => Ok(Some(vn)),
-        n => {
-            caches.push(n);
-            Ok(None)
+fn take_verb_name(env: &mut Environment, tokens: &mut Vec<Token>, ty: &TypeId) -> Option<String> {
+    match tokens.pop() {
+        Some(Token::Label(vn)) if env.fn_map.is_defined(ty, &vn) => Some(vn),
+        Some(Token::Label(vn)) if is_symbol_value(ty, &vn) => Some(vn),
+        Some(n) => {
+            tokens.push(n);
+            None
         }
+        None => None,
     }
-}
-
-fn is_verb_name(env: &Environment, ty: &TypeId, vn: &str) -> bool {
-    env.fn_map.is_defined(ty, vn)
 }
 
 fn collect_args(
@@ -134,6 +120,9 @@ fn collect_args(
     ty: &TypeId,
     vn: &str,
 ) -> RResult<Vec<Value>> {
+    if is_symbol_value(ty, vn) {
+        return Ok(Vec::new());
+    }
     let mut args = Vec::new();
     loop {
         match env.fn_map.check_types(ty, vn, &args) {
@@ -142,24 +131,16 @@ fn collect_args(
             TypesCheckResult::Ok => break,
         }
         if let Some(n) = caches.pop() {
-            args.push(expand_label(env, n)?);
+            args.push(n);
             continue;
         }
         let Some(n) = eval_sentence(env, tokens, caches, false)? else {
             return Err(format!("error: too few arguments passed to {} on {}.", vn, ty).into());
         };
-        args.push(expand_label(env, n)?);
+        args.push(n);
     }
     args.reverse();
     Ok(args)
-}
-
-fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
-    if let Value::Label(n) = n {
-        env.vr_map.get_unwrap(&n)
-    } else {
-        Ok(n)
-    }
 }
 
 fn appplicate(
@@ -169,6 +150,12 @@ fn appplicate(
     vn: &str,
     args: Vec<Value>,
 ) -> RResult<Value> {
+    if is_symbol_value(ty, vn) {
+        let Value::Symbol(n) = s else {
+            panic!("failed to extract symbol.");
+        };
+        return env.vr_map.get_unwrap(&n);
+    }
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
         FunctionCode::UserDefined(mut tokens) => {
@@ -181,6 +168,10 @@ fn appplicate(
             Ok(result)
         }
     }
+}
+
+fn is_symbol_value(ty: &TypeId, vn: &str) -> bool {
+    matches!(ty, TypeId::Symbol) && vn == "%"
 }
 
 fn pop_cache_or_eval_element(
@@ -223,7 +214,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::Argument(n)) => env
             .get_argument(n)
             .ok_or(format!("error: argument at {n} not found.").into()),
-        Some(n) => Ok(Value::from(n)),
+        Some(n) => Value::from(env, n),
     }
 }
 

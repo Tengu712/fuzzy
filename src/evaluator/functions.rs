@@ -35,7 +35,6 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
-mod symbol;
 mod variable;
 
 use super::{
@@ -92,7 +91,6 @@ impl FunctionMapStack {
         boolean::insert(self);
         lazy::insert(self);
         numeric::insert(self);
-        symbol::insert(self);
     }
 
     pub fn pop(&mut self) {
