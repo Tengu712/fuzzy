@@ -7,6 +7,7 @@ pub enum Token {
     // signs
     Dot,
     Comma,
+    Semicolon,
     LParen,
     RParen,
     LBrace,
@@ -38,6 +39,7 @@ impl Display for Token {
         match self {
             Self::Dot => write!(f, "."),
             Self::Comma => write!(f, ","),
+            Self::Semicolon => write!(f, ";"),
             Self::LParen => write!(f, "("),
             Self::RParen => write!(f, ")"),
             Self::LBrace => write!(f, "{{"),
@@ -56,6 +58,8 @@ impl Token {
             Self::Dot
         } else if s == "," {
             Self::Comma
+        } else if s == ";" {
+            Self::Semicolon
         } else if s == "(" {
             Self::LParen
         } else if s == ")" {
@@ -86,7 +90,7 @@ impl Token {
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
     let mut tokens = Vec::new();
-    let regex = Regex::new(r#""[^"]*"|[(\{\[)\}\]]|\S+|\.|,"#)?;
+    let regex = Regex::new(r#""[^"]*"|[(\{\[)\}\]]|\S+|\.|,|;"#)?;
     for l in code.lines() {
         let l = l.find("--").map(|n| &l[..n]).unwrap_or(l);
         let i = regex
@@ -129,7 +133,7 @@ fn is_sign_str(s: &str) -> bool {
 }
 
 fn is_sign_char(c: char) -> bool {
-    matches!(c, '.' | ',' | '(' | ')' | '{' | '}' | '[' | ']')
+    matches!(c, '.' | ',' | ';' | '(' | ')' | '{' | '}' | '[' | ']')
 }
 
 fn parse_number(s: &str) -> Option<Token> {
@@ -231,6 +235,12 @@ mod test {
     #[test]
     fn test_lex_lazy_type() {
         let tokens = lex("['i32 '{} '{}]").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_lex_semicolon() {
+        let tokens = lex("1 + 2; * 5").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 

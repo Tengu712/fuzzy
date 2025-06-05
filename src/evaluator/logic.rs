@@ -37,6 +37,17 @@ pub fn eval_sentence(
             }
         }
 
+        // consume semicolon
+        //
+        // NOTE: Unlike commas, semicolons are only consumed at the top level.
+        if matches!(tokens.last(), Some(Token::Semicolon)) {
+            if is_toplevel {
+                tokens.pop();
+            } else {
+                break;
+            }
+        }
+
         // end?
         if is_sentence_end(tokens, caches) {
             break;
@@ -91,7 +102,10 @@ fn eval_clause(
 }
 
 fn is_clause_end(tokens: &[Token], caches: &[Value]) -> bool {
-    matches!(tokens.last(), None | Some(Token::Dot) | Some(Token::Comma)) && caches.is_empty()
+    matches!(
+        tokens.last(),
+        None | Some(Token::Dot) | Some(Token::Comma) | Some(Token::Semicolon)
+    ) && caches.is_empty()
 }
 
 fn take_verb_name(
@@ -177,6 +191,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         None => panic!("no token passed to eval_element."),
         Some(Token::Dot) => panic!("Token::Dot passed to eval_element."),
         Some(Token::Comma) => panic!("Token::Comma passed to eval_element."),
+        Some(Token::Semicolon) => panic!("Token::Semicolon passed to eval_element."),
         Some(Token::LParen) => {
             let mut n = extract_brackets_content(tokens, Token::LParen, Token::RParen)?;
             let result = eval_block(env, &mut n, None)?.pop().unwrap_or_default();
