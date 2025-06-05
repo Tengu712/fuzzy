@@ -47,7 +47,7 @@ impl Display for Token {
             Self::RBrace => write!(f, "}}"),
             Self::LBracket => write!(f, "["),
             Self::RBracket => write!(f, "]"),
-            Self::Slf => write!(f, "$"),
+            Self::Slf => write!(f, "##"),
             Self::Top => write!(f, "T"),
             n => write!(f, "{n:?}"),
         }
@@ -74,7 +74,7 @@ impl Token {
             Self::LBracket
         } else if s == "]" {
             Self::RBracket
-        } else if s == "$" {
+        } else if s == "##" {
             Self::Slf
         } else if s == "T" {
             Self::Top
@@ -250,7 +250,7 @@ mod test {
 
     #[test]
     fn test_lex_self() {
-        let tokens = lex("1 + $, * $ab").unwrap();
+        let tokens = lex("1 + ##, * $ab").unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 

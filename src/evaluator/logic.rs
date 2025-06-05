@@ -172,7 +172,8 @@ fn appplicate(
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
         FunctionCode::UserDefined(mut tokens) => {
-            let mut results = eval_block(env, &mut tokens, Some(args))?;
+            let params = EnterLazyParams { slf: Some(s), args };
+            let mut results = eval_block(env, &mut tokens, Some(params))?;
             let result = results.pop().unwrap_or_default();
             Ok(result)
         }

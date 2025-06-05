@@ -1,6 +1,6 @@
 use crate::{
     RResult,
-    evaluator::{self, Environment},
+    evaluator::{self, EnterLazyParams, Environment},
     lexer,
 };
 use std::fs;
@@ -14,11 +14,14 @@ pub fn run(path: String, args: Vec<String>) -> RResult<()> {
 
     // setup
     let mut env = Environment::default();
-    let args = evaluator::parse_command_line_args(args);
+    let params = EnterLazyParams {
+        slf: None,
+        args: evaluator::parse_command_line_args(args),
+    };
     tokens.reverse();
 
     // evaluate
-    evaluator::eval_block(&mut env, &mut tokens, Some(args))?;
+    evaluator::eval_block(&mut env, &mut tokens, Some(params))?;
 
     // finish
     Ok(())

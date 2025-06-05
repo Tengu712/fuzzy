@@ -8,27 +8,36 @@ use crate::{lexer::*, *};
 use std::collections::HashMap;
 
 #[derive(Default)]
+pub struct EnterLazyParams {
+    pub slf: Option<value::Value>,
+    pub args: Vec<value::Value>,
+}
+
+#[derive(Default)]
 pub struct Environment {
     fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
+    slfs: Vec<Option<value::Value>>,
     args: Vec<Vec<value::Value>>,
 }
 
 impl Environment {
-    pub fn prepare_block_scope(&mut self, args: Option<Vec<value::Value>>) {
-        if let Some(n) = args {
-            self.args.push(n);
-        }
+    pub fn prepare_block_scope(&mut self, params: Option<EnterLazyParams>) {
         self.fn_map.push();
         self.vr_map.push();
+        if let Some(n) = params {
+            self.slfs.push(n.slf);
+            self.args.push(n.args);
+        }
     }
 
-    pub fn cleanup_block_scope(&mut self, should_pop_args: bool) {
-        if should_pop_args {
-            self.args.pop();
-        }
+    pub fn cleanup_block_scope(&mut self, ret_from_lazy: bool) {
         self.fn_map.pop();
         self.vr_map.pop();
+        if ret_from_lazy {
+            self.slfs.pop();
+            self.args.pop();
+        }
     }
 
     fn get_argument(&self, i: usize) -> Option<value::Value> {
@@ -64,12 +73,12 @@ pub fn parse_command_line_args(args: Vec<String>) -> Vec<value::Value> {
 pub fn eval_block(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
-    args: Option<Vec<value::Value>>,
+    params: Option<EnterLazyParams>,
 ) -> RResult<Vec<value::Value>> {
-    let should_pop_args = args.is_some();
-    env.prepare_block_scope(args);
+    let b = params.is_some();
+    env.prepare_block_scope(params);
     let results = eval_block_directly(env, tokens);
-    env.cleanup_block_scope(should_pop_args);
+    env.cleanup_block_scope(b);
     results
 }
 

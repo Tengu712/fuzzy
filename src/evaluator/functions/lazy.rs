@@ -13,18 +13,18 @@ pub fn insert(fm: &mut FunctionMapStack) {
 
 fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
-    eval(env, &mut s, Some(Vec::new()))
+    eval(env, &mut s, Vec::new())
 }
 
 fn while_loop(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, Lazy);
     loop {
-        let r = eval(env, &mut s.clone(), Some(Vec::new()))?;
+        let r = eval(env, &mut s.clone(), Vec::new())?;
         if r == Value::Nil {
             break;
         }
-        eval(env, &mut o.clone(), Some(vec![r]))?;
+        eval(env, &mut o.clone(), vec![r])?;
     }
     Ok(Value::Nil)
 }
@@ -65,14 +65,13 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Function);
     args.reverse();
-    eval(env, &mut s.1, Some(args))
+    eval(env, &mut s.1, args)
 }
 
-fn eval(
-    env: &mut Environment,
-    tokens: &mut Vec<Token>,
-    args: Option<Vec<Value>>,
-) -> RResult<Value> {
-    let result = eval_block(env, tokens, args)?.pop().unwrap_or_default();
+fn eval(env: &mut Environment, tokens: &mut Vec<Token>, args: Vec<Value>) -> RResult<Value> {
+    let params = EnterLazyParams { slf: None, args };
+    let result = eval_block(env, tokens, Some(params))?
+        .pop()
+        .unwrap_or_default();
     Ok(result)
 }
