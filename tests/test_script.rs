@@ -118,7 +118,7 @@ fn test_while_loop() {
 fn test_verb_chain() {
     run(
         "tests/scripts/verb-chain.fuz",
-        "1 != 2\n1 != 2\n20\n20\n4\n4\n",
+        "1 != 2\n1 != 2\n20\n20\n20\n4\n4\n",
     );
 }
 
