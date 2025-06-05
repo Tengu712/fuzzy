@@ -110,11 +110,6 @@ fn test_while_loop() {
 }
 
 #[test]
-fn test_symbol_function() {
-    run("tests/scripts/symbol-function.fuz", "3\n4\nHello, world!\n");
-}
-
-#[test]
 fn test_verb_chain() {
     run(
         "tests/scripts/verb-chain.fuz",

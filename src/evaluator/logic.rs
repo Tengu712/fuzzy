@@ -13,21 +13,45 @@ pub fn eval_sentence(
 ) -> RResult<Option<Value>> {
     let mut s = caches.pop();
     loop {
+        // take over subject
         if let Some(s) = s.take() {
             caches.push(s);
         }
-        s = Some(eval_clause(env, tokens, caches)?.unwrap_or_default());
+
+        // eval clause
+        s = eval_clause(env, tokens, caches)?;
+        match s.take() {
+            Some(Value::Label(n)) => s = env.vr_map.get_unwrap(&n).ok().or(Some(Value::Label(n))),
+            Some(n) => s = Some(n),
+            None => s = None,
+        }
+
+        // consume comma
+        //
+        // NOTE: If this sentence is a clause, this ends here.
+        //       This occurs in structures like `S V So1 Vo1, So2`.
         if matches!(tokens.last(), Some(Token::Comma)) {
             tokens.pop();
             if !is_toplevel {
                 break;
             }
         }
+
+        // end?
         if is_sentence_end(tokens, caches) {
             break;
         }
-        if let Some(vn) = take_verb(env, tokens, caches, &s.as_ref().unwrap().typeid())? {
-            caches.push(Value::Symbol(vn));
+
+        // check if the next value is a valid verb
+        //
+        // NOTE: In an `S V O V' O'` sentence structure,
+        //       - if `V'` is the verb of `S`, then the process should carry
+        //         over to the next loop.
+        //       - Otherwise, the sentence ends here, meaning `V'` is considered
+        //         the subject of the next sentence.
+        let ty = &s.as_ref().unwrap().typeid();
+        if let Some(vn) = take_verb_name(env, tokens, caches, ty)? {
+            caches.push(Value::Label(vn));
         } else {
             break;
         }
@@ -47,14 +71,20 @@ fn eval_clause(
     if is_clause_end(tokens, caches) {
         return Ok(None);
     }
+
     let s = pop_cache_or_eval_element(env, tokens, caches)?;
+
     if is_clause_end(tokens, caches) {
         return Ok(Some(s));
     }
+
+    let s = expand_label(env, s)?;
+
     let ty = &s.typeid();
-    let Some(vn) = take_verb(env, tokens, caches, ty)? else {
+    let Some(vn) = take_verb_name(env, tokens, caches, ty)? else {
         return Ok(Some(s));
     };
+
     let args = collect_args(env, tokens, caches, ty, vn.as_str())?;
     let result = appplicate(env, s, ty, vn.as_str(), args)?;
     Ok(Some(result))
@@ -64,60 +94,23 @@ fn is_clause_end(tokens: &[Token], caches: &[Value]) -> bool {
     matches!(tokens.last(), None | Some(Token::Dot) | Some(Token::Comma)) && caches.is_empty()
 }
 
-fn take_verb(
+fn take_verb_name(
     env: &mut Environment,
     tokens: &mut Vec<Token>,
     caches: &mut Vec<Value>,
     ty: &TypeId,
 ) -> RResult<Option<String>> {
-    if let Some(n) = caches.pop() {
-        return Ok(take_verb_or_cache(env, caches, ty, n));
-    }
-
-    if let Some(Token::Label(label)) = tokens.last() {
-        if is_verb_name(env, ty, label.as_str()) {
-            let Some(Token::Label(n)) = tokens.pop() else {
-                panic!("failed to extract label.");
-            };
-            return Ok(Some(n));
-        }
-        if let Some(Value::Symbol(vn)) = env.vr_map.get(label) {
-            if is_verb_name(env, ty, vn.as_str()) {
-                let Value::Symbol(n) = env.vr_map.get_unwrap(label).unwrap() else {
-                    panic!("failed to extract symbol.");
-                };
-                tokens.pop();
-                return Ok(Some(n));
-            }
-        }
-        return Ok(None);
-    }
-
-    let n = eval_element(env, tokens)?;
-    let n = take_verb_or_cache(env, caches, ty, n);
-    Ok(n)
-}
-
-fn take_verb_or_cache(
-    env: &mut Environment,
-    caches: &mut Vec<Value>,
-    ty: &TypeId,
-    v: Value,
-) -> Option<String> {
-    if let Value::Symbol(n) = &v {
-        if is_verb_name(env, ty, n.as_str()) {
-            let Value::Symbol(n) = v else {
-                panic!("failed to extract symbol.");
-            };
-            return Some(n);
+    match pop_cache_or_eval_element(env, tokens, caches)? {
+        Value::Label(vn) if is_verb_name(env, ty, vn.as_str()) => Ok(Some(vn)),
+        n => {
+            caches.push(n);
+            Ok(None)
         }
     }
-    caches.push(v);
-    None
 }
 
 fn is_verb_name(env: &Environment, ty: &TypeId, vn: &str) -> bool {
-    env.fn_map.is_defined(ty, vn) || is_symbol_value(ty, vn)
+    env.fn_map.is_defined(ty, vn)
 }
 
 fn collect_args(
@@ -127,9 +120,6 @@ fn collect_args(
     ty: &TypeId,
     vn: &str,
 ) -> RResult<Vec<Value>> {
-    if is_symbol_value(ty, vn) {
-        return Ok(Vec::new());
-    }
     let mut args = Vec::new();
     loop {
         match env.fn_map.check_types(ty, vn, &args) {
@@ -138,16 +128,24 @@ fn collect_args(
             TypesCheckResult::Ok => break,
         }
         if let Some(n) = caches.pop() {
-            args.push(n);
+            args.push(expand_label(env, n)?);
             continue;
         }
         let Some(n) = eval_sentence(env, tokens, caches, false)? else {
             return Err(format!("error: too few arguments passed to {} on {}.", vn, ty).into());
         };
-        args.push(n);
+        args.push(expand_label(env, n)?);
     }
     args.reverse();
     Ok(args)
+}
+
+fn expand_label(env: &Environment, n: Value) -> RResult<Value> {
+    if let Value::Label(n) = n {
+        env.vr_map.get_unwrap(&n)
+    } else {
+        Ok(n)
+    }
 }
 
 fn appplicate(
@@ -157,13 +155,6 @@ fn appplicate(
     vn: &str,
     args: Vec<Value>,
 ) -> RResult<Value> {
-    if is_symbol_value(ty, vn) {
-        if let Value::Symbol(n) = s {
-            return env.vr_map.get_unwrap(&n);
-        } else {
-            panic!("failed to extract symbol.");
-        }
-    }
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),
     }
@@ -179,10 +170,6 @@ fn pop_cache_or_eval_element(
     } else {
         eval_element(env, tokens)
     }
-}
-
-fn is_symbol_value(ty: &TypeId, vn: &str) -> bool {
-    matches!(ty, TypeId::Symbol) && vn == "$"
 }
 
 fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value> {
@@ -210,7 +197,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::Argument(n)) => env
             .get_argument(n)
             .ok_or(format!("error: argument at {n} not found.").into()),
-        Some(n) => Value::from(env, n),
+        Some(n) => Ok(Value::from(n)),
     }
 }
 
