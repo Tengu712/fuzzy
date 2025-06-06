@@ -1,5 +1,8 @@
 use crate::RResult;
-use std::{fmt::{Display, Result}, collections::HashMap};
+use std::{
+    collections::HashMap,
+    fmt::{Display, Result},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserDefinedType {

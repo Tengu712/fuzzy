@@ -18,7 +18,12 @@ fn define_private_user_type(env: &mut Environment, s: Value, args: Vec<Value>) -
     define_user_type(env, s, args, true)
 }
 
-fn define_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>, _is_private: bool) -> RResult<Value> {
+fn define_user_type(
+    env: &mut Environment,
+    s: Value,
+    mut args: Vec<Value>,
+    _is_private: bool,
+) -> RResult<Value> {
     let s = extract_variant!(s, Array);
     let type_name = pop_extract_variant!(args, Symbol);
 
