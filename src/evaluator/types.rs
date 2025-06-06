@@ -1,5 +1,13 @@
 use crate::RResult;
-use std::fmt::{Display, Result};
+use std::{fmt::{Display, Result}, collections::HashMap};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UserDefinedType {
+    pub name: String,
+    pub fields: Vec<(String, TypeId, bool)>,
+}
+
+pub type UserDefinedTypeMap = HashMap<String, UserDefinedType>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeId {
@@ -22,6 +30,7 @@ pub enum TypeId {
     Array,
     Lazy,
     Function(Vec<TypeId>),
+    UserDefined(String),
 }
 
 impl Display for TypeId {
@@ -56,6 +65,7 @@ impl Display for TypeId {
                 s.push(']');
                 write!(f, "{s}")
             }
+            Self::UserDefined(n) => write!(f, "{n}"),
         }
     }
 }
@@ -82,6 +92,19 @@ impl TypeId {
             "[]" => Ok(Self::Array),
             "{}" => Ok(Self::Lazy),
             _ => Err(format!("error: typename '{s}' not defined.").into()),
+        }
+    }
+
+    pub fn from_with_user_types(s: &str, user_types: &UserDefinedTypeMap) -> RResult<Self> {
+        match Self::from(s) {
+            Ok(t) => Ok(t),
+            Err(_) => {
+                if user_types.contains_key(s) {
+                    Ok(Self::UserDefined(s.to_string()))
+                } else {
+                    Err(format!("error: typename '{s}' not defined.").into())
+                }
+            }
         }
     }
 }

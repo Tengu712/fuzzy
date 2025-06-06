@@ -18,6 +18,7 @@ pub struct Environment {
     fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
     args: Vec<Vec<value::Value>>,
+    user_types: types::UserDefinedTypeMap,
 }
 
 impl Environment {

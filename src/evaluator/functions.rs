@@ -36,10 +36,11 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
+mod user_defined;
 mod variable;
 
 use super::{
-    types::{ALL_PREMITIVE_TYPES, TypeId},
+    types::{ALL_PREMITIVE_TYPES, TypeId, UserDefinedType},
     value::Value,
     *,
 };
@@ -93,6 +94,7 @@ impl FunctionMapStack {
         boolean::insert(self);
         lazy::insert(self);
         numeric::insert(self);
+        user_defined::insert(self);
     }
 
     pub fn pop(&mut self) {
