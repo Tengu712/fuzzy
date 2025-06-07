@@ -1,3 +1,0 @@
-[T ':public-member 'i32. () '::private-member ['i32]] ->> 'newtype.
-
-[':public-member 12. '::private-member {#0 !!} : ['i32]] : 'newtype.

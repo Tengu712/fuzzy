@@ -82,10 +82,6 @@ fn define_user_type(
         });
     }
 
-    env.ut_map.insert(o.clone(), UserType { mutable, fields })?;
-    
-    let type_id = TypeId::UserDefined(o.clone());
-    env.fn_map.insert_new_type(type_id);
-    
+    env.ut_map.insert(o, UserType { mutable, fields })?;
     Ok(Value::Nil)
 }

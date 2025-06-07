@@ -36,7 +36,6 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
-mod userdefined;
 mod usertype;
 mod variable;
 
@@ -102,9 +101,9 @@ impl FunctionMapStack {
         self.map.iter().rev().find_map(|n| n.get(ty)?.get(vn))
     }
 
-    pub fn is_defined(&self, sty: Option<&TypeId>, ty: &TypeId, vn: &str) -> bool {
+    pub fn is_defined(&self, sty: Option<TypeId>, ty: &TypeId, vn: &str) -> bool {
         self.get(ty, vn)
-            .map(|n| !n.private || sty.map(|n| n == ty).unwrap_or(false))
+            .map(|n| !n.private || sty.map(|n| &n == ty).unwrap_or(false))
             .unwrap_or(false)
     }
 
@@ -146,23 +145,16 @@ impl FunctionMapStack {
             .clone()
     }
 
-    pub fn insert_new_type(&mut self, ty: TypeId) {
+    fn insert_new_type(&mut self, ty: TypeId) {
         if !self.map.iter().any(|n| n.contains_key(&ty)) {
             self.map
                 .last_mut()
                 .expect("funciton map stack is empty.")
-                .insert(ty.clone(), HashMap::new());
-                
-            if let TypeId::UserDefined(type_name) = &ty {
-                userdefined::insert(self, type_name);
-                cmp::insert(self, &ty);
-                print::insert(self, &ty);
-                variable::insert(self, &ty);
-            }
+                .insert(ty, HashMap::new());
         }
     }
 
-    pub fn insert_user_defined(&mut self, ty: &TypeId, vn: String, fun: Function) -> RResult<()> {
+    fn insert_user_defined(&mut self, ty: &TypeId, vn: String, fun: Function) -> RResult<()> {
         if !self.map.iter().any(|n| n.contains_key(ty)) {
             return Err(format!("error: the type {ty} is not defined.").into());
         }
