@@ -194,3 +194,8 @@ fn test_wrong_redefine_type() {
 fn test_wrong_private_access() {
     run_wrong("tests/scripts/wrong-private-access.fuz");
 }
+
+#[test]
+fn test_wrong_popped_type() {
+    run_wrong("tests/scripts/wrong-popped-type.fuz");
+}
