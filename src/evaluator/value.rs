@@ -7,7 +7,6 @@ use std::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Object {
-    pub mutable: bool,
     pub private: bool,
     pub value: Value,
 }
@@ -81,8 +80,7 @@ impl Display for Value {
                 for (i, k) in keys.into_iter().enumerate() {
                     let v = n.get(k).unwrap();
                     let p = if v.private { "::" } else { ":" };
-                    let a = if v.mutable { "->" } else { "=>" };
-                    s.push_str(&format!("{p}{k} {a} {}", v.value));
+                    s.push_str(&format!("{p}{k} {}", v.value));
                     if i < n.len() - 1 {
                         s.push(' ');
                     }

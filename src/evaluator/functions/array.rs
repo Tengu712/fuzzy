@@ -95,23 +95,9 @@ fn define_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RR
     let mut fields = Vec::new();
     let mut i = 0;
     while i < s.len() {
-        if i + 2 >= s.len() {
+        if i + 1 >= s.len() {
             return Err("error: field definition must have mutability, name and type.".into());
         }
-
-        let m = match &s[i] {
-            Value::Top => true,
-            Value::Nil => false,
-            n => {
-                return Err(format!(
-                    "error: field mutability must be a bool but {} passed.",
-                    n.typeid()
-                )
-                .into());
-            }
-        };
-
-        i += 1;
 
         let Value::Symbol(n) = &s[i] else {
             return Err("error: field name must be a symbol.".into());
@@ -137,7 +123,6 @@ fn define_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RR
         i += 1;
 
         fields.push(UserTypeField {
-            mutable: m,
             private: p,
             name: n,
             ty: t,
@@ -185,7 +170,6 @@ fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> R
         fields.insert(
             n,
             Object {
-                mutable: false,
                 private: p,
                 value: v,
             },
@@ -222,7 +206,6 @@ fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> R
             )
             .into());
         }
-        field.mutable = ut.mutable;
     }
 
     Ok(Value::UserType((TypeId::UserDefined(o), fields)))

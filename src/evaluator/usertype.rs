@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserTypeField {
-    pub mutable: bool,
     pub private: bool,
     pub name: String,
     pub ty: TypeId,
@@ -30,7 +29,7 @@ impl UserTypeMapStack {
 
     pub fn insert(&mut self, key: String, ut: Vec<UserTypeField>) -> RResult<()> {
         if self.map.iter_mut().rev().any(|n| n.contains_key(&key)) {
-            return Err(format!("error: cannot redefine type.").into());
+            return Err("error: cannot redefine type.".into());
         }
         self.map
             .last_mut()
