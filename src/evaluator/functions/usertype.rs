@@ -1,7 +1,6 @@
 use super::{
     super::usertype::{UserType, UserTypeField},
-    variable,
-    *,
+    variable, *,
 };
 
 pub fn insert(fm: &mut FunctionMapStack) {
@@ -94,12 +93,12 @@ fn define_user_type(
     }
 
     env.ut_map.insert(o.clone(), UserType { mutable, fields })?;
-    
+
     let t = TypeId::UserDefined(o);
     env.fn_map.insert_new_type(t.clone());
     variable::insert(&mut env.fn_map, &t);
     insert_member_access(&mut env.fn_map, &t);
-    
+
     Ok(Value::Nil)
 }
 
@@ -114,16 +113,20 @@ fn access_private_member(_env: &mut Environment, s: Value, args: Vec<Value>) -> 
 fn access_member(s: Value, mut args: Vec<Value>, is_private: bool) -> RResult<Value> {
     let (_, fields) = extract_variant!(s, UserType);
     let member_name = pop_extract_variant!(args, Symbol);
-    
+
     let Some(member) = fields.get(&member_name) else {
         return Err(format!("error: member {} not found.", member_name).into());
     };
-    
+
     if member.private != is_private {
         let access_type = if is_private { "private" } else { "public" };
         let member_type = if member.private { "private" } else { "public" };
-        return Err(format!("error: cannot access {} member {} with {} accessor.", member_type, member_name, access_type).into());
+        return Err(format!(
+            "error: cannot access {} member {} with {} accessor.",
+            member_type, member_name, access_type
+        )
+        .into());
     }
-    
+
     Ok(member.value.clone())
 }

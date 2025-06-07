@@ -51,20 +51,26 @@ impl VariableMapStack {
                         } else {
                             member_name
                         };
-                        
+
                         if let Some(member) = fields.get(actual_name) {
                             if member.private == is_private {
                                 Ok(member.value.clone())
                             } else {
                                 let access_type = if is_private { "private" } else { "public" };
                                 let member_type = if member.private { "private" } else { "public" };
-                                Err(format!("error: cannot access {} member {} with {} accessor.", member_type, actual_name, access_type).into())
+                                Err(format!(
+                                    "error: cannot access {} member {} with {} accessor.",
+                                    member_type, actual_name, access_type
+                                )
+                                .into())
                             }
                         } else {
                             Err(format!("error: member {} not found.", actual_name).into())
                         }
                     }
-                    _ => Err(format!("error: variable {} is not a user-defined type.", var_name).into())
+                    _ => Err(
+                        format!("error: variable {} is not a user-defined type.", var_name).into(),
+                    ),
                 }
             } else {
                 Err(format!("error: undefined variable {} found.", var_name).into())
