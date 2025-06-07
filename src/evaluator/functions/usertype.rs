@@ -48,10 +48,13 @@ fn define_user_type(
             return Err("error: field name must start with ':' or '::'.".into());
         };
 
-        let Value::Symbol(t) = &s[i + 1] else {
+        let t = if let Value::Symbol(t) = &s[i + 1] {
+            TypeId::from(t)
+        } else if let Value::Array(a) = &s[i + 1] {
+            TypeId::Function(convert_symbols_to_typeids(a)?)
+        } else {
             return Err("error: field type must be a symbol.".into());
         };
-        let t = TypeId::from(t);
 
         fields.push(UserTypeField {
             private: p,
