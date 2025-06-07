@@ -51,6 +51,22 @@ body {
   margin-left: min(300px, 80vw);
 }
 
+@media (min-width: 768px) {
+  .sidebar {
+    position: static;
+    transform: translateX(0);
+    width: 300px;
+  }
+
+  .main-container {
+    margin-left: 0;
+  }
+
+  .main-container.sidebar-open {
+    margin-left: 0;
+  }
+}
+
 .header {
   padding: 0.5rem;
   position: sticky;
@@ -77,6 +93,16 @@ body {
   font-weight: bold;
   font-size: 1.2rem;
   padding: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .menu-toggle {
+    display: none;
+  }
+
+  .header-content.has-toggle {
+    justify-content: center;
+  }
 }
 
 .logo {
