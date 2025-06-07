@@ -22,7 +22,7 @@ fn define_user_type(
     env: &mut Environment,
     s: Value,
     mut args: Vec<Value>,
-    _is_private: bool,
+    private: bool,
 ) -> RResult<Value> {
     let s = extract_variant!(s, Array);
     let type_name = pop_extract_variant!(args, Symbol);
@@ -31,28 +31,26 @@ fn define_user_type(
     let mut i = 0;
     while i < s.len() {
         if i + 1 >= s.len() {
-            return Err(format!("error: field definition must have both name and type.").into());
+            return Err("error: field definition must have both name and type.".into());
         }
 
-        let field_name = match &s[i] {
-            Value::Symbol(name) => {
-                if name.starts_with("::") {
-                    (name[2..].to_string(), true)
-                } else if name.starts_with(":") {
-                    (name[1..].to_string(), false)
-                } else {
-                    return Err(format!("error: field name must start with ':' or '::'.").into());
-                }
-            }
-            _ => return Err(format!("error: field name must be a symbol.").into()),
+        let Value::Symbol(n) = &s[i] else {
+            return Err("error: field name must be a symbol.".into());
+        };
+        let (n, p) = if let Some(n) = n.strip_prefix("::") {
+            (n.to_string(), true)
+        } else if let Some(n) = n.strip_prefix(":") {
+            (n.to_string(), false)
+        } else {
+            return Err("error: field name must start with ':' or '::'.".into());
         };
 
-        let field_type = match &s[i + 1] {
-            Value::Symbol(type_str) => TypeId::from_with_user_types(type_str, &env.user_types)?,
-            _ => return Err(format!("error: field type must be a symbol.").into()),
+        let Value::Symbol(t) = &s[i + 1] else {
+            return Err("error: field type must be a symbol.".into());
         };
+        let t = TypeId::from_with_user_types(t, &env.user_types)?;
 
-        fields.push((field_name.0, field_type, field_name.1));
+        fields.push((n, t, p));
         i += 2;
     }
 
@@ -63,5 +61,5 @@ fn define_user_type(
 
     env.user_types.insert(type_name.clone(), user_type);
 
-    Ok(Value::Symbol(type_name))
+    Ok(Value::Nil)
 }

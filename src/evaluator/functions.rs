@@ -36,14 +36,10 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
-mod user_defined;
+mod usertype;
 mod variable;
 
-use super::{
-    types::{ALL_PREMITIVE_TYPES, TypeId, UserDefinedType},
-    value::Value,
-    *,
-};
+use super::{types::*, value::Value, *};
 use crate::RResult;
 
 type BuiltinFunctionCode = fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>;
