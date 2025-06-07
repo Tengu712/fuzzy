@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashMap;
 
 pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
@@ -13,6 +14,7 @@ pub fn insert(fm: &mut FunctionMapStack) {
             builtin_fn!("@-", vec![TypeId::I32], remove),
             builtin_fn!("$>", vec![TypeId::Any], push),
             builtin_fn!("$-", vec![], pop),
+            builtin_fn!(":", vec![TypeId::Symbol], create_user_defined_instance),
         ],
     );
 }
@@ -84,6 +86,60 @@ fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Array);
     s.pop();
     Ok(Value::Array(s))
+}
+
+fn create_user_defined_instance(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Array);
+    let type_symbol = pop_extract_variant!(args, Symbol);
+    
+    let user_type = env.ut_map.get(&type_symbol)
+        .ok_or_else(|| format!("error: undefined user type {type_symbol}."))?
+        .clone();
+    
+    if s.len() % 2 != 0 {
+        return Err("error: field values must be paired (field_name, value).".into());
+    }
+    
+    let mut fields = HashMap::new();
+    let mut i = 0;
+    while i < s.len() {
+        let field_name_symbol = match &s[i] {
+            Value::Symbol(name) => {
+                if let Some(n) = name.strip_prefix("::") {
+                    n.to_string()
+                } else if let Some(n) = name.strip_prefix(":") {
+                    n.to_string()
+                } else {
+                    return Err("error: field name must start with ':' or '::'.".into());
+                }
+            }
+            _ => return Err("error: field name must be a symbol.".into()),
+        };
+        
+        let field_value = s[i + 1].clone();
+        
+        let field_def = user_type.fields.iter()
+            .find(|f| f.name == field_name_symbol)
+            .ok_or_else(|| format!("error: undefined field {field_name_symbol} in type {type_symbol}."))?;
+        
+        if field_value.typeid() != field_def.ty && field_def.ty != TypeId::Any {
+            return Err(format!(
+                "error: field {field_name_symbol} expects type {} but got {}.",
+                field_def.ty, field_value.typeid()
+            ).into());
+        }
+        
+        fields.insert(field_name_symbol, field_value);
+        i += 2;
+    }
+    
+    for field_def in &user_type.fields {
+        if !fields.contains_key(&field_def.name) {
+            return Err(format!("error: missing field {} in type {}.", field_def.name, type_symbol).into());
+        }
+    }
+    
+    Ok(Value::UserDefined((type_symbol, fields)))
 }
 
 fn convert_index(i: i32, l: usize) -> RResult<usize> {

@@ -1,6 +1,6 @@
 use super::{Environment, types::TypeId};
 use crate::{RResult, lexer::Token};
-use std::fmt::{Display, Result};
+use std::{fmt::{Display, Result}, collections::HashMap};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -23,6 +23,7 @@ pub enum Value {
     Array(Vec<Value>),
     Lazy(Vec<Token>),
     Function((TypeId, Vec<Token>)),
+    UserDefined((String, HashMap<String, Value>)),
 }
 
 impl Default for Value {
@@ -63,6 +64,7 @@ impl Display for Value {
             }
             Self::Lazy(_) => write!(f, "{{}}"),
             Self::Function(_) => write!(f, "{{}}"),
+            Self::UserDefined((name, _)) => write!(f, "{name}{{}}"),
         }
     }
 }
@@ -141,6 +143,7 @@ impl Value {
             Self::Array(_) => TypeId::Array,
             Self::Lazy(_) => TypeId::Lazy,
             Self::Function((n, _)) => n.clone(),
+            Self::UserDefined((name, _)) => TypeId::UserDefined(name.clone()),
         }
     }
 
@@ -189,6 +192,9 @@ impl Value {
                         .all(|(x, y)| x.typeid() == y.typeid() && x.equal(y))
             }
             (Self::Lazy(a), Self::Lazy(b)) => a == b,
+            (Self::UserDefined((an, av)), Self::UserDefined((bn, bv))) => {
+                an == bn && av == bv
+            }
             _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
         }
     }

@@ -116,7 +116,7 @@ fn is_valid_verb(env: &Environment, ty: &TypeId, vn: &str) -> bool {
     is_symbol_value(ty, vn)
         || env
             .fn_map
-            .is_defined(env.vr_map.get("##").map(|n| n.typeid()), ty, vn)
+            .is_defined(env.vr_map.get("##").map(|n| n.typeid()).as_ref(), ty, vn)
 }
 
 fn collect_args(

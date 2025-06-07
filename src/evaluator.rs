@@ -16,9 +16,9 @@ pub struct EnterLazyParams {
 
 #[derive(Default)]
 pub struct Environment {
-    fn_map: functions::FunctionMapStack,
-    vr_map: variable::VariableMapStack,
-    ut_map: usertype::UserTypeMapStack,
+    pub fn_map: functions::FunctionMapStack,
+    pub vr_map: variable::VariableMapStack,
+    pub ut_map: usertype::UserTypeMapStack,
     args: Vec<Vec<value::Value>>,
 }
 
