@@ -136,6 +136,11 @@ fn test_extend_builtin_type() {
 }
 
 #[test]
+fn test_define_type() {
+    run("tests/scripts/define-type.fuz", "");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

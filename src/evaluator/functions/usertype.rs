@@ -1,4 +1,7 @@
-use super::*;
+use super::{
+    super::usertype::{UserType, UserTypeField},
+    *,
+};
 
 pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
@@ -22,10 +25,10 @@ fn define_user_type(
     env: &mut Environment,
     s: Value,
     mut args: Vec<Value>,
-    _private: bool,
+    mutable: bool,
 ) -> RResult<Value> {
     let s = extract_variant!(s, Array);
-    let type_name = pop_extract_variant!(args, Symbol);
+    let o = pop_extract_variant!(args, Symbol);
 
     let mut fields = Vec::new();
     let mut i = 0;
@@ -37,10 +40,10 @@ fn define_user_type(
         let Value::Symbol(n) = &s[i] else {
             return Err("error: field name must be a symbol.".into());
         };
-        let (n, p) = if let Some(n) = n.strip_prefix("::") {
-            (n.to_string(), true)
+        let (p, n) = if let Some(n) = n.strip_prefix("::") {
+            (true, n.to_string())
         } else if let Some(n) = n.strip_prefix(":") {
-            (n.to_string(), false)
+            (false, n.to_string())
         } else {
             return Err("error: field name must start with ':' or '::'.".into());
         };
@@ -48,18 +51,16 @@ fn define_user_type(
         let Value::Symbol(t) = &s[i + 1] else {
             return Err("error: field type must be a symbol.".into());
         };
-        let t = TypeId::from(t, Some(&env.user_types))?;
+        let t = TypeId::from(t);
 
-        fields.push((n, t, p));
+        fields.push(UserTypeField {
+            private: p,
+            name: n,
+            ty: t,
+        });
         i += 2;
     }
 
-    let user_type = UserDefinedType {
-        name: type_name.clone(),
-        fields,
-    };
-
-    env.user_types.update(type_name.clone(), user_type);
-
+    env.ut_map.insert(o, UserType { mutable, fields })?;
     Ok(Value::Nil)
 }

@@ -1,6 +1,7 @@
 mod functions;
 mod logic;
 mod types;
+mod usertype;
 mod value;
 mod variable;
 
@@ -17,15 +18,15 @@ pub struct EnterLazyParams {
 pub struct Environment {
     fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
+    ut_map: usertype::UserTypeMapStack,
     args: Vec<Vec<value::Value>>,
-    user_types: types::UserTypeMapStack,
 }
 
 impl Environment {
     pub fn prepare_block_scope(&mut self, params: EnterLazyParams) {
         self.fn_map.push();
         self.vr_map.push();
-        self.user_types.push();
+        self.ut_map.push();
         if let Some(n) = params.slf {
             self.vr_map.insert_self(n);
         }
@@ -37,7 +38,7 @@ impl Environment {
     pub fn cleanup_block_scope(&mut self, pop_args: bool) {
         self.fn_map.pop();
         self.vr_map.pop();
-        self.user_types.pop();
+        self.ut_map.pop();
         if pop_args {
             self.args.pop();
         }

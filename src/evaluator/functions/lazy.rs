@@ -55,7 +55,7 @@ fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
     let mut v = Vec::new();
     for n in n {
         match n {
-            Value::Symbol(n) => v.push(TypeId::from(&n, None)?),
+            Value::Symbol(n) => v.push(TypeId::from(&n)),
             Value::Array(n) => v.push(TypeId::Function(convert_symbols_to_typeids(n)?)),
             _ => return Err(format!("error: the element of argument list must be symbol or array of symbols but passed '{}'.", n.typeid()).into()),
         }

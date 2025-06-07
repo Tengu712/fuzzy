@@ -19,8 +19,7 @@ macro_rules! for_all_numeric_types {
 
 macro_rules! insert_numeric_function {
     ($fm: expr, $fn: ident, $op: tt, $ty: ident, $_: ident) => {
-        let ty = TypeId::from(stringify!($ty), None)
-            .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
+        let ty = TypeId::from(stringify!($ty));
         $fm.insert_all(
             &ty,
             vec![builtin_fn!(
@@ -34,8 +33,7 @@ macro_rules! insert_numeric_function {
 
 macro_rules! insert_cast {
     ($fm: expr, $ty: ident, $_: ident) => {
-        let ty = TypeId::from(stringify!($ty), None)
-            .unwrap_or_else(|_| panic!("failed to get typeid from str '{}'.", stringify!($ty)));
+        let ty = TypeId::from(stringify!($ty));
         $fm.insert_all(
             &ty,
             vec![builtin_fn!(
