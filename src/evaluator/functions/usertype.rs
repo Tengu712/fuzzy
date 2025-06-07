@@ -34,7 +34,7 @@ fn define_user_type(
     let mut i = 0;
     while i < s.len() {
         if i + 2 >= s.len() {
-            return Err("error: field definition must have both name and type.".into());
+            return Err("error: field definition must have mutability, name and type.".into());
         }
 
         let m = match &s[i] {

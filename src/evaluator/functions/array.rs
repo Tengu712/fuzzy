@@ -1,4 +1,4 @@
-use super::*;
+use super::{value::Object, *};
 
 pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_all(
@@ -13,6 +13,7 @@ pub fn insert(fm: &mut FunctionMapStack) {
             builtin_fn!("@-", vec![TypeId::I32], remove),
             builtin_fn!("$>", vec![TypeId::Any], push),
             builtin_fn!("$-", vec![], pop),
+            builtin_fn!(":", vec![TypeId::Symbol], cast_to_user_type),
         ],
     );
 }
@@ -84,6 +85,72 @@ fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Array);
     s.pop();
     Ok(Value::Array(s))
+}
+
+fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Array);
+    let o = pop_extract_variant!(args, Symbol);
+
+    let mut fields = HashMap::new();
+    let mut i = 0;
+    while i < s.len() {
+        if i + 1 > s.len() {
+            return Err("error: field definition must have both name and value.".into());
+        }
+
+        let Value::Symbol(n) = &s[i] else {
+            return Err("error: field name must be a symbol.".into());
+        };
+        let (p, n) = if let Some(n) = n.strip_prefix("::") {
+            (true, n.to_string())
+        } else if let Some(n) = n.strip_prefix(":") {
+            (false, n.to_string())
+        } else {
+            return Err("error: field name must start with ':' or '::'.".into());
+        };
+
+        i += 1;
+
+        // OPTIMIZE: remove clone.
+        let v = s[i].clone();
+
+        i += 1;
+
+        fields.insert(
+            n,
+            Object {
+                mutable: false,
+                private: p,
+                value: v,
+            },
+        );
+    }
+
+    let Some(ut) = env.ut_map.get(&o) else {
+        return Err(format!("error: the type {o} not defined.").into());
+    };
+
+    if fields.len() != ut.fields.len() {
+        return Err("error: The provided array does not match the type definition.".into());
+    }
+
+    for ut in ut.fields.iter() {
+        let Some(field) = fields.get_mut(&ut.name) else {
+            return Err(format!(
+                "error: {} not found in user-type variable definition.",
+                ut.name
+            )
+            .into());
+        };
+        if field.private != ut.private {
+            let e = if ut.private { "private" } else { "public" };
+            let r = if field.private { "private" } else { "public" };
+            return Err(format!("error: {} defined as {e} but specified {r}.", ut.name).into());
+        }
+        field.mutable = ut.mutable;
+    }
+
+    Ok(Value::UserType((TypeId::UserDefined(o), fields)))
 }
 
 fn convert_index(i: i32, l: usize) -> RResult<usize> {

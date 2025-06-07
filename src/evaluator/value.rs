@@ -1,6 +1,16 @@
 use super::{Environment, types::TypeId};
 use crate::{RResult, lexer::Token};
-use std::fmt::{Display, Result};
+use std::{
+    collections::HashMap,
+    fmt::{Display, Result},
+};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Object {
+    pub mutable: bool,
+    pub private: bool,
+    pub value: Value,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -23,6 +33,7 @@ pub enum Value {
     Array(Vec<Value>),
     Lazy(Vec<Token>),
     Function((TypeId, Vec<Token>)),
+    UserType((TypeId, HashMap<String, Object>)),
 }
 
 impl Default for Value {
@@ -63,6 +74,22 @@ impl Display for Value {
             }
             Self::Lazy(_) => write!(f, "{{}}"),
             Self::Function(_) => write!(f, "{{}}"),
+            Self::UserType((_, n)) => {
+                let mut s = "[".to_string();
+                let mut keys = n.keys().collect::<Vec<_>>();
+                keys.sort();
+                for (i, k) in keys.into_iter().enumerate() {
+                    let v = n.get(k).unwrap();
+                    let p = if v.private { "::" } else { ":" };
+                    let a = if v.mutable { "->" } else { "=>" };
+                    s.push_str(&format!("{p}{k} {a} {}", v.value));
+                    if i < n.len() - 1 {
+                        s.push(' ');
+                    }
+                }
+                s.push(']');
+                write!(f, "{s}")
+            }
         }
     }
 }
@@ -141,6 +168,7 @@ impl Value {
             Self::Array(_) => TypeId::Array,
             Self::Lazy(_) => TypeId::Lazy,
             Self::Function((n, _)) => n.clone(),
+            Self::UserType((n, _)) => n.clone(),
         }
     }
 
@@ -189,6 +217,7 @@ impl Value {
                         .all(|(x, y)| x.typeid() == y.typeid() && x.equal(y))
             }
             (Self::Lazy(a), Self::Lazy(b)) => a == b,
+            (Self::UserType((at, av)), Self::UserType((bt, bv))) => at == bt && av == bv,
             _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
         }
     }
