@@ -148,6 +148,16 @@ fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> R
             return Err(format!("error: {} defined as {e} but specified {r}.", ut.name).into());
         }
         field.mutable = ut.mutable;
+        
+        if ut.ty != field.value.typeid() {
+            return Err(format!(
+                "error: field {} expects type {} but {} provided.",
+                ut.name,
+                ut.ty,
+                field.value.typeid()
+            )
+            .into());
+        }
     }
 
     Ok(Value::UserType((TypeId::UserDefined(o), fields)))

@@ -41,6 +41,34 @@ impl VariableMapStack {
         if let Some(n) = self.get(name) {
             // OPTIMIZE: remove clone.
             Ok(n.clone())
+        } else if let Some((var_name, member_name)) = split_member_access(name) {
+            if let Some(var_value) = self.get(var_name) {
+                match var_value {
+                    Value::UserType((_, fields)) => {
+                        let is_private = member_name.starts_with(':');
+                        let actual_name = if is_private {
+                            &member_name[1..]
+                        } else {
+                            member_name
+                        };
+                        
+                        if let Some(member) = fields.get(actual_name) {
+                            if member.private == is_private {
+                                Ok(member.value.clone())
+                            } else {
+                                let access_type = if is_private { "private" } else { "public" };
+                                let member_type = if member.private { "private" } else { "public" };
+                                Err(format!("error: cannot access {} member {} with {} accessor.", member_type, actual_name, access_type).into())
+                            }
+                        } else {
+                            Err(format!("error: member {} not found.", actual_name).into())
+                        }
+                    }
+                    _ => Err(format!("error: variable {} is not a user-defined type.", var_name).into())
+                }
+            } else {
+                Err(format!("error: undefined variable {} found.", var_name).into())
+            }
         } else {
             Err(format!("error: undefined variable {name} found.").into())
         }
@@ -72,5 +100,15 @@ impl VariableMapStack {
             .last_mut()
             .expect("variable map stack is empty.")
             .insert("##".to_string(), n);
+    }
+}
+
+fn split_member_access(name: &str) -> Option<(&str, &str)> {
+    if let Some((var_name, member_name)) = name.split_once("::") {
+        Some((var_name, member_name))
+    } else if let Some((var_name, member_name)) = name.split_once(":") {
+        Some((var_name, member_name))
+    } else {
+        None
     }
 }

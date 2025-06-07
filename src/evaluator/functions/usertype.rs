@@ -1,5 +1,6 @@
 use super::{
     super::usertype::{UserType, UserTypeField},
+    variable,
     *,
 };
 
@@ -9,6 +10,16 @@ pub fn insert(fm: &mut FunctionMapStack) {
         vec![
             builtin_fn!("=>>", vec![TypeId::Symbol], define_public_user_type),
             builtin_fn!("->>", vec![TypeId::Symbol], define_private_user_type),
+        ],
+    );
+}
+
+pub fn insert_member_access(fm: &mut FunctionMapStack, ty: &TypeId) {
+    fm.insert_all(
+        ty,
+        vec![
+            builtin_fn!(":", vec![TypeId::Symbol], access_public_member),
+            builtin_fn!("::", vec![TypeId::Symbol], access_private_member),
         ],
     );
 }
@@ -82,6 +93,37 @@ fn define_user_type(
         });
     }
 
-    env.ut_map.insert(o, UserType { mutable, fields })?;
+    env.ut_map.insert(o.clone(), UserType { mutable, fields })?;
+    
+    let t = TypeId::UserDefined(o);
+    env.fn_map.insert_new_type(t.clone());
+    variable::insert(&mut env.fn_map, &t);
+    insert_member_access(&mut env.fn_map, &t);
+    
     Ok(Value::Nil)
+}
+
+fn access_public_member(_env: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
+    access_member(s, args, false)
+}
+
+fn access_private_member(_env: &mut Environment, s: Value, args: Vec<Value>) -> RResult<Value> {
+    access_member(s, args, true)
+}
+
+fn access_member(s: Value, mut args: Vec<Value>, is_private: bool) -> RResult<Value> {
+    let (_, fields) = extract_variant!(s, UserType);
+    let member_name = pop_extract_variant!(args, Symbol);
+    
+    let Some(member) = fields.get(&member_name) else {
+        return Err(format!("error: member {} not found.", member_name).into());
+    };
+    
+    if member.private != is_private {
+        let access_type = if is_private { "private" } else { "public" };
+        let member_type = if member.private { "private" } else { "public" };
+        return Err(format!("error: cannot access {} member {} with {} accessor.", member_type, member_name, access_type).into());
+    }
+    
+    Ok(member.value.clone())
 }
