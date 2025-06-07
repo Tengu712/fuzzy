@@ -36,7 +36,6 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
-mod usertype;
 mod variable;
 
 use super::{types::*, value::Value, *};
@@ -94,7 +93,6 @@ impl FunctionMapStack {
         boolean::insert(self);
         lazy::insert(self);
         numeric::insert(self);
-        usertype::insert(self);
     }
 
     pub fn pop(&mut self) {

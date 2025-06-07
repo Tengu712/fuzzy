@@ -137,7 +137,7 @@ fn test_extend_builtin_type() {
 
 #[test]
 fn test_define_type() {
-    run("tests/scripts/define-type.fuz", "12\n35\n");
+    run("tests/scripts/define-type.fuz", "12\n55\n35\n");
 }
 
 #[test]

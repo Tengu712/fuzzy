@@ -1,13 +1,15 @@
 -- User type defining test. --
 
 -- define user-type
-[T ':public-member 'i32. () '::private-member ['i32]] ->> 'newtype.
+[T ':public-member 'i32. () '::private-member ['i32]] |> 'newtype.
 
 -- define user-type variable
 [':public-member 12. '::private-member {#0 !!} : ['i32]] : 'newtype, -> 'var.
 
 -- get public member
 var:public-member !!
+{ ##:public-member + #0, !! } : ['i32], -> 'newtype:function.
+var function 43.
 
 -- get private member
 { ##::private-member @ 35. } : [], -> 'newtype:function.
