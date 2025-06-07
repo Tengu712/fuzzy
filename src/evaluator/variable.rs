@@ -1,4 +1,4 @@
-use super::value::Value;
+use super::{types::TypeId, value::Value};
 use crate::RResult;
 use std::collections::HashMap;
 
@@ -37,7 +37,29 @@ impl VariableMapStack {
             .map(|n| &n.value)
     }
 
-    pub fn get_unwrap(&self, name: &str) -> RResult<Value> {
+    pub fn get_unwrap(&self, sty: Option<TypeId>, name: &str) -> RResult<Value> {
+        if let Some((pn, cn, private)) = split_member_access(name) {
+            let Some(n) = self.get(pn) else {
+                return Err(format!("error: undefined variable {pn} found.").into());
+            };
+            let Value::UserType((ty, n)) = n else {
+                return Err(format!("error: {pn} is builtin-type but it has no field.").into());
+            };
+            let Some(n) = n.get(cn) else {
+                return Err(format!("error: {pn} doesn't have the member {cn}.").into());
+            };
+            if private != n.private {
+                let e = if n.private { "private" } else { "public" };
+                let r = if private { "private" } else { "public" };
+                return Err(
+                    format!("error: {cn} of {pn} defined as {e} but specified {r}.").into(),
+                );
+            }
+            if private && !sty.map(|n| &n == ty).unwrap_or(false) {
+                return Err(format!("error: {cn} of {pn} is private.").into());
+            }
+            return Ok(n.value.clone());
+        }
         if let Some(n) = self.get(name) {
             // OPTIMIZE: remove clone.
             Ok(n.clone())
@@ -72,5 +94,15 @@ impl VariableMapStack {
             .last_mut()
             .expect("variable map stack is empty.")
             .insert("##".to_string(), n);
+    }
+}
+
+fn split_member_access(name: &str) -> Option<(&str, &str, bool)> {
+    if let Some((pn, cn)) = name.split_once("::") {
+        Some((pn, cn, true))
+    } else if let Some((pn, cn)) = name.split_once(":") {
+        Some((pn, cn, false))
+    } else {
+        None
     }
 }

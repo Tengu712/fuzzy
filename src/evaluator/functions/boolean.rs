@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn insert(fm: &mut FunctionMapStack) {
-    fm.insert_all(
+    fm.insert_builtins(
         &TypeId::Bool,
         vec![
             builtin_fn!("~", vec![], not),

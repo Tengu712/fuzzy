@@ -38,11 +38,7 @@ mod numeric;
 mod print;
 mod variable;
 
-use super::{
-    types::{ALL_PREMITIVE_TYPES, TypeId},
-    value::Value,
-    *,
-};
+use super::{types::*, value::Value, *};
 use crate::RResult;
 
 type BuiltinFunctionCode = fn(&mut Environment, Value, Vec<Value>) -> RResult<Value>;
@@ -67,21 +63,25 @@ pub enum FunctionCode {
     UserDefined(Vec<Token>),
 }
 
+type FunctionMap = HashMap<TypeId, HashMap<String, Function>>;
+
 #[derive(Default)]
 pub struct FunctionMapStack {
-    map: Vec<HashMap<TypeId, HashMap<String, Function>>>,
+    builtins: FunctionMap,
+    users: Vec<FunctionMap>,
 }
 
 impl FunctionMapStack {
     pub fn push(&mut self) {
-        if !self.map.is_empty() {
-            self.map.push(HashMap::new());
+        if !self.users.is_empty() {
+            self.users.push(HashMap::new());
             return;
         }
 
-        self.map.push(HashMap::new());
+        self.users.push(HashMap::new());
+
         for n in ALL_PREMITIVE_TYPES {
-            self.map
+            self.users
                 .last_mut()
                 .unwrap()
                 .insert(n.clone(), HashMap::new());
@@ -96,11 +96,15 @@ impl FunctionMapStack {
     }
 
     pub fn pop(&mut self) {
-        self.map.pop();
+        self.users.pop();
     }
 
     fn get(&self, ty: &TypeId, vn: &str) -> Option<&Function> {
-        self.map.iter().rev().find_map(|n| n.get(ty)?.get(vn))
+        if let Some(n) = self.builtins.get(ty).and_then(|n| n.get(vn)) {
+            Some(n)
+        } else {
+            self.users.iter().rev().find_map(|n| n.get(ty)?.get(vn))
+        }
     }
 
     pub fn is_defined(&self, sty: Option<TypeId>, ty: &TypeId, vn: &str) -> bool {
@@ -148,8 +152,8 @@ impl FunctionMapStack {
     }
 
     fn insert_new_type(&mut self, ty: TypeId) {
-        if !self.map.iter().any(|n| n.contains_key(&ty)) {
-            self.map
+        if !self.users.iter().any(|n| n.contains_key(&ty)) {
+            self.users
                 .last_mut()
                 .expect("funciton map stack is empty.")
                 .insert(ty, HashMap::new());
@@ -157,18 +161,18 @@ impl FunctionMapStack {
     }
 
     fn insert_user_defined(&mut self, ty: &TypeId, vn: String, fun: Function) -> RResult<()> {
-        if !self.map.iter().any(|n| n.contains_key(ty)) {
+        if !self.users.iter().any(|n| n.contains_key(ty)) {
             return Err(format!("error: the type {ty} is not defined.").into());
         }
         if let Some(n) = self
-            .map
+            .users
             .iter_mut()
             .rev()
             .find_map(|n| n.get_mut(ty)?.get_mut(&vn))
         {
             *n = fun;
         } else {
-            let n = self.map.last_mut().expect("function map stack is empty.");
+            let n = self.users.last_mut().expect("function map stack is empty.");
             if !n.contains_key(ty) {
                 n.insert(ty.clone(), HashMap::new());
             }
@@ -177,14 +181,27 @@ impl FunctionMapStack {
         Ok(())
     }
 
-    fn insert_all(&mut self, ty: &TypeId, funs: Vec<(String, Function)>) {
+    fn insert_builtins(&mut self, ty: &TypeId, funs: Vec<(String, Function)>) {
+        if !self.builtins.contains_key(ty) {
+            self.builtins.insert(ty.clone(), HashMap::new());
+        }
         let n = self
-            .map
-            .last_mut()
-            .expect("function map stack is empty.")
+            .builtins
             .get_mut(ty)
             .unwrap_or_else(|| panic!("function map for {ty} not inserted."));
         n.reserve(funs.len());
         n.extend(funs);
     }
+}
+
+fn convert_symbols_to_typeids(n: &[Value]) -> RResult<Vec<TypeId>> {
+    let mut v = Vec::new();
+    for n in n {
+        match n {
+            Value::Symbol(n) => v.push(TypeId::from(n)),
+            Value::Array(n) => v.push(TypeId::Function(convert_symbols_to_typeids(n)?)),
+            _ => return Err(format!("error: the element of type list must be symbol or array of symbols but passed '{}'.", n.typeid()).into()),
+        }
+    }
+    Ok(v)
 }

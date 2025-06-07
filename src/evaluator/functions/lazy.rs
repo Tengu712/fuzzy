@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn insert(fm: &mut FunctionMapStack) {
-    fm.insert_all(
+    fm.insert_builtins(
         &TypeId::Lazy,
         vec![
             builtin_fn!("%", vec![], eval_lazy_block),
@@ -33,7 +33,7 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, Array);
 
-    let ts = convert_symbols_to_typeids(o)?;
+    let ts = convert_symbols_to_typeids(&o)?;
     let t = TypeId::Function(ts.clone());
 
     if !env.fn_map.is_defined(None, &t, "@") {
@@ -43,24 +43,11 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
             types: ts,
             code: FunctionCode::Builtin(call),
         };
-        env.fn_map.insert_new_type(t.clone());
-        env.fn_map.insert_user_defined(&t, "@".to_string(), n)?;
+        env.fn_map.insert_builtins(&t, vec![("@".to_string(), n)]);
         variable::insert(&mut env.fn_map, &t);
     }
 
     Ok(Value::Function((t, s)))
-}
-
-fn convert_symbols_to_typeids(n: Vec<Value>) -> RResult<Vec<TypeId>> {
-    let mut v = Vec::new();
-    for n in n {
-        match n {
-            Value::Symbol(n) => v.push(TypeId::from(&n)?),
-            Value::Array(n) => v.push(TypeId::Function(convert_symbols_to_typeids(n)?)),
-            _ => return Err(format!("error: the element of argument list must be symbol or array of symbols but passed '{}'.", n.typeid()).into()),
-        }
-    }
-    Ok(v)
 }
 
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {

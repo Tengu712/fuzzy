@@ -1,0 +1,3 @@
+['::private-member 'i32] |> 'newtype.
+['::private-member 12] : 'newtype, -> var.
+var::private-member !!

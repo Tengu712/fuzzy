@@ -136,6 +136,11 @@ fn test_extend_builtin_type() {
 }
 
 #[test]
+fn test_define_type() {
+    run("tests/scripts/define-type.fuz", "12\n55\n35\n");
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }
@@ -178,4 +183,19 @@ fn test_wrong_redefine_builtin_function() {
 #[test]
 fn test_wrong_call_private_function() {
     run_wrong("tests/scripts/wrong-call-private-function.fuz");
+}
+
+#[test]
+fn test_wrong_redefine_type() {
+    run_wrong("tests/scripts/wrong-redefine-type.fuz");
+}
+
+#[test]
+fn test_wrong_private_access() {
+    run_wrong("tests/scripts/wrong-private-access.fuz");
+}
+
+#[test]
+fn test_wrong_popped_type() {
+    run_wrong("tests/scripts/wrong-popped-type.fuz");
 }
