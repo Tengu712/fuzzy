@@ -1,6 +1,6 @@
 use super::*;
 
-macro_rules! for_all_numeric_types {
+macro_rules! for_all_integer_types {
     ($macro: ident $(, $($arg: tt)*)?) => {
         $macro!($($($arg)*, )? i8, I8);
         $macro!($($($arg)*, )? u8, U8);
@@ -12,6 +12,12 @@ macro_rules! for_all_numeric_types {
         $macro!($($($arg)*, )? u64, U64);
         $macro!($($($arg)*, )? i128, I128);
         $macro!($($($arg)*, )? u128, U128);
+    };
+}
+
+macro_rules! for_all_numeric_types {
+    ($macro: ident $(, $($arg: tt)*)?) => {
+        for_all_integer_types!($macro $(, $($arg)*)?);
         $macro!($($($arg)*, )? f32, F32);
         $macro!($($($arg)*, )? f64, F64);
     };
@@ -50,6 +56,7 @@ pub fn insert(maps: &mut FunctionMapStack) {
     for_all_numeric_types!(insert_numeric_function, maps, sub, -);
     for_all_numeric_types!(insert_numeric_function, maps, mul, *);
     for_all_numeric_types!(insert_numeric_function, maps, div, /);
+    for_all_integer_types!(insert_numeric_function, maps, mdd, %);
     for_all_numeric_types!(insert_cast, maps);
 }
 
@@ -68,6 +75,7 @@ for_all_numeric_types!(define_numeric_function, add, +);
 for_all_numeric_types!(define_numeric_function, sub, -);
 for_all_numeric_types!(define_numeric_function, mul, *);
 for_all_numeric_types!(define_numeric_function, div, /);
+for_all_integer_types!(define_numeric_function, mdd, %);
 
 macro_rules! define_cast {
     ($ty: ident, $variant: ident) => {
