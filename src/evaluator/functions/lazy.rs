@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn insert(fm: &mut FunctionMapStack) {
-    fm.insert_all(
+    fm.insert_builtins(
         &TypeId::Lazy,
         vec![
             builtin_fn!("%", vec![], eval_lazy_block),
@@ -43,8 +43,7 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
             types: ts,
             code: FunctionCode::Builtin(call),
         };
-        env.fn_map.insert_new_type(t.clone());
-        env.fn_map.insert_user_defined(&t, "@".to_string(), n)?;
+        env.fn_map.insert_builtins(&t, vec![("@".to_string(), n)]);
         variable::insert(&mut env.fn_map, &t);
     }
 

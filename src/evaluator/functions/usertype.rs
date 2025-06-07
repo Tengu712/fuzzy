@@ -4,7 +4,7 @@ use super::{
 };
 
 pub fn insert(fm: &mut FunctionMapStack) {
-    fm.insert_all(
+    fm.insert_builtins(
         &TypeId::Array,
         vec![
             builtin_fn!("=>>", vec![TypeId::Symbol], define_public_user_type),

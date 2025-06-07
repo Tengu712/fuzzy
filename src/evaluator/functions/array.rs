@@ -1,7 +1,7 @@
 use super::{value::Object, *};
 
 pub fn insert(fm: &mut FunctionMapStack) {
-    fm.insert_all(
+    fm.insert_builtins(
         &TypeId::Array,
         vec![
             builtin_fn!("#", vec![], length),

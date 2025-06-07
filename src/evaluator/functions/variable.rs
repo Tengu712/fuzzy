@@ -1,7 +1,7 @@
 use super::{super::variable::Variable, *};
 
 pub fn insert(fm: &mut FunctionMapStack, ty: &TypeId) {
-    fm.insert_all(
+    fm.insert_builtins(
         ty,
         vec![
             builtin_fn!("->", vec![TypeId::Symbol], define_mutable),
