@@ -90,7 +90,7 @@ fn eval_clause(
     };
 
     let args = collect_args(env, tokens, caches, ty, vn.as_str())?;
-    let result = appplicate(env, s, ty, vn.as_str(), args)?;
+    let result = applicate(env, s, ty, vn.as_str(), args)?;
     Ok(Some(result))
 }
 
@@ -113,10 +113,7 @@ fn take_verb_name(env: &Environment, tokens: &mut Vec<Token>, ty: &TypeId) -> Op
 }
 
 fn is_valid_verb(env: &Environment, ty: &TypeId, vn: &str) -> bool {
-    is_symbol_value(ty, vn)
-        || env
-            .fn_map
-            .is_defined(env.vr_map.get("##").map(|n| n.typeid()), ty, vn)
+    is_symbol_value(ty, vn) || env.fn_map.is_defined(env.get_self_type(), ty, vn)
 }
 
 fn collect_args(
@@ -149,7 +146,7 @@ fn collect_args(
     Ok(args)
 }
 
-fn appplicate(
+fn applicate(
     env: &mut Environment,
     s: Value,
     ty: &TypeId,
@@ -160,7 +157,7 @@ fn appplicate(
         let Value::Symbol(n) = s else {
             panic!("failed to extract symbol.");
         };
-        return env.vr_map.get_unwrap(&n);
+        return env.vr_map.get_unwrap(env.get_self_type(), &n);
     }
     match env.fn_map.get_code(ty, vn) {
         FunctionCode::Builtin(f) => (f)(env, s, args),

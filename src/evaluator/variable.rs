@@ -1,4 +1,4 @@
-use super::value::Value;
+use super::{types::TypeId, value::Value};
 use crate::RResult;
 use std::collections::HashMap;
 
@@ -37,44 +37,32 @@ impl VariableMapStack {
             .map(|n| &n.value)
     }
 
-    pub fn get_unwrap(&self, name: &str) -> RResult<Value> {
+    pub fn get_unwrap(&self, sty: Option<TypeId>, name: &str) -> RResult<Value> {
+        if let Some((pn, cn, private)) = split_member_access(name) {
+            let Some(v) = self.get(pn) else {
+                return Err(format!("error: undefined variable {pn} found.").into());
+            };
+            let Value::UserType((ty, n)) = v else {
+                return Err(format!("error: {pn} is builtin-type but it has no field.").into());
+            };
+            let Some(n) = n.get(cn) else {
+                return Err(format!("error: {pn} doesn't have the member {cn}.").into());
+            };
+            if private != n.private {
+                let e = if n.private { "private" } else { "public" };
+                let r = if private { "private" } else { "public" };
+                return Err(
+                    format!("error: {cn} of {pn} defined as {e} but specified {r}.").into(),
+                );
+            }
+            if private && sty.map(|n| &n == ty).unwrap_or(false) {
+                return Err(format!("error: {cn} of {pn} is private.").into());
+            }
+            return Ok(v.clone());
+        }
         if let Some(n) = self.get(name) {
             // OPTIMIZE: remove clone.
             Ok(n.clone())
-        } else if let Some((var_name, member_name)) = split_member_access(name) {
-            if let Some(var_value) = self.get(var_name) {
-                match var_value {
-                    Value::UserType((_, fields)) => {
-                        let is_private = member_name.starts_with(':');
-                        let actual_name = if is_private {
-                            &member_name[1..]
-                        } else {
-                            member_name
-                        };
-
-                        if let Some(member) = fields.get(actual_name) {
-                            if member.private == is_private {
-                                Ok(member.value.clone())
-                            } else {
-                                let access_type = if is_private { "private" } else { "public" };
-                                let member_type = if member.private { "private" } else { "public" };
-                                Err(format!(
-                                    "error: cannot access {} member {} with {} accessor.",
-                                    member_type, actual_name, access_type
-                                )
-                                .into())
-                            }
-                        } else {
-                            Err(format!("error: member {} not found.", actual_name).into())
-                        }
-                    }
-                    _ => Err(
-                        format!("error: variable {} is not a user-defined type.", var_name).into(),
-                    ),
-                }
-            } else {
-                Err(format!("error: undefined variable {} found.", var_name).into())
-            }
         } else {
             Err(format!("error: undefined variable {name} found.").into())
         }
@@ -109,11 +97,11 @@ impl VariableMapStack {
     }
 }
 
-fn split_member_access(name: &str) -> Option<(&str, &str)> {
-    if let Some((var_name, member_name)) = name.split_once("::") {
-        Some((var_name, member_name))
-    } else if let Some((var_name, member_name)) = name.split_once(":") {
-        Some((var_name, member_name))
+fn split_member_access(name: &str) -> Option<(&str, &str, bool)> {
+    if let Some((pn, cn)) = name.split_once("::") {
+        Some((pn, cn, true))
+    } else if let Some((pn, cn)) = name.split_once(":") {
+        Some((pn, cn, false))
     } else {
         None
     }

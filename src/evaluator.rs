@@ -52,6 +52,10 @@ impl Environment {
             .get(i)
             .cloned()
     }
+
+    fn get_self_type(&self) -> Option<types::TypeId> {
+        self.vr_map.get("##").map(|n| n.typeid())
+    }
 }
 
 /// A function to convert command line arguments to Fuzzy values.

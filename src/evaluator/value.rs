@@ -142,7 +142,7 @@ impl Value {
             Token::F64(n) => Ok(Self::F64(n)),
             Token::String(n) => Ok(Self::String(n)),
             Token::Symbol(n) => Ok(Self::Symbol(n)),
-            Token::Label(n) => env.vr_map.get_unwrap(&n),
+            Token::Label(n) => env.vr_map.get_unwrap(env.get_self_type(), &n),
             _ => panic!("tried to create value from non-atom token."),
         }
     }
