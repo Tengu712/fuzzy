@@ -18,13 +18,14 @@ pub struct Environment {
     fn_map: functions::FunctionMapStack,
     vr_map: variable::VariableMapStack,
     args: Vec<Vec<value::Value>>,
-    user_types: types::UserDefinedTypeMap,
+    user_types: types::UserTypeMapStack,
 }
 
 impl Environment {
     pub fn prepare_block_scope(&mut self, params: EnterLazyParams) {
         self.fn_map.push();
         self.vr_map.push();
+        self.user_types.push();
         if let Some(n) = params.slf {
             self.vr_map.insert_self(n);
         }
@@ -36,6 +37,7 @@ impl Environment {
     pub fn cleanup_block_scope(&mut self, pop_args: bool) {
         self.fn_map.pop();
         self.vr_map.pop();
+        self.user_types.pop();
         if pop_args {
             self.args.pop();
         }

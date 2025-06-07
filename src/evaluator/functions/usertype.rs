@@ -22,7 +22,7 @@ fn define_user_type(
     env: &mut Environment,
     s: Value,
     mut args: Vec<Value>,
-    private: bool,
+    _private: bool,
 ) -> RResult<Value> {
     let s = extract_variant!(s, Array);
     let type_name = pop_extract_variant!(args, Symbol);
@@ -48,7 +48,7 @@ fn define_user_type(
         let Value::Symbol(t) = &s[i + 1] else {
             return Err("error: field type must be a symbol.".into());
         };
-        let t = TypeId::from_with_user_types(t, &env.user_types)?;
+        let t = TypeId::from(t, Some(&env.user_types))?;
 
         fields.push((n, t, p));
         i += 2;
@@ -59,7 +59,7 @@ fn define_user_type(
         fields,
     };
 
-    env.user_types.insert(type_name.clone(), user_type);
+    env.user_types.update(type_name.clone(), user_type);
 
     Ok(Value::Nil)
 }

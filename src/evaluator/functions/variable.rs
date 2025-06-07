@@ -27,7 +27,7 @@ macro_rules! define_variable_definition {
                 // function
                 if let Value::Function((ty, tokens)) = s {
                     // check if it can redefine?
-                    let trg_ty = TypeId::from(trg_ty)?;
+                    let trg_ty = TypeId::from(trg_ty, None)?;
                     if env
                         .fn_map
                         .get(&trg_ty, trg)

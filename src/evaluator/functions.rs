@@ -90,7 +90,7 @@ impl FunctionMapStack {
         boolean::insert(self);
         lazy::insert(self);
         numeric::insert(self);
-        user_defined::insert(self);
+        usertype::insert(self);
     }
 
     pub fn pop(&mut self) {
