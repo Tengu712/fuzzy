@@ -2,6 +2,7 @@
   "name": "fuzzy-homepage",
   "version": "1.0.0",
   "description": "Fuzzy programming language homepage",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
