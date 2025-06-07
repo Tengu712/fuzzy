@@ -147,8 +147,6 @@ fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> R
             let r = if field.private { "private" } else { "public" };
             return Err(format!("error: {} defined as {e} but specified {r}.", ut.name).into());
         }
-        field.mutable = ut.mutable;
-
         if ut.ty != field.value.typeid() {
             return Err(format!(
                 "error: field {} expects type {} but {} provided.",
@@ -158,6 +156,7 @@ fn cast_to_user_type(env: &mut Environment, s: Value, mut args: Vec<Value>) -> R
             )
             .into());
         }
+        field.mutable = ut.mutable;
     }
 
     Ok(Value::UserType((TypeId::UserDefined(o), fields)))
