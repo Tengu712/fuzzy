@@ -32,7 +32,7 @@ fn run_inner(env: &mut Environment) -> RResult<bool> {
     let input = input.trim();
 
     // exit?
-    if input == "#exit" {
+    if input == "/exit" {
         return Ok(false);
     }
 
