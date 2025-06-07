@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct UserTypeField {
+    pub mutable: bool,
     pub private: bool,
     pub name: String,
     pub ty: TypeId,
