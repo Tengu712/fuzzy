@@ -17,14 +17,12 @@ function Layout({ children }) {
           <div className="logo">Fuzzy</div>
         </div>
       </header>
-      
       <div className="layout">
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <nav>
             <p>Navigation</p>
           </nav>
         </aside>
-        
         <main className="main-content">
           {children}
         </main>
