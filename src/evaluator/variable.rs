@@ -39,10 +39,10 @@ impl VariableMapStack {
 
     pub fn get_unwrap(&self, sty: Option<TypeId>, name: &str) -> RResult<Value> {
         if let Some((pn, cn, private)) = split_member_access(name) {
-            let Some(v) = self.get(pn) else {
+            let Some(n) = self.get(pn) else {
                 return Err(format!("error: undefined variable {pn} found.").into());
             };
-            let Value::UserType((ty, n)) = v else {
+            let Value::UserType((ty, n)) = n else {
                 return Err(format!("error: {pn} is builtin-type but it has no field.").into());
             };
             let Some(n) = n.get(cn) else {
@@ -55,10 +55,10 @@ impl VariableMapStack {
                     format!("error: {cn} of {pn} defined as {e} but specified {r}.").into(),
                 );
             }
-            if private && sty.map(|n| &n == ty).unwrap_or(false) {
+            if private && !sty.map(|n| &n == ty).unwrap_or(false) {
                 return Err(format!("error: {cn} of {pn} is private.").into());
             }
-            return Ok(v.clone());
+            return Ok(n.value.clone());
         }
         if let Some(n) = self.get(name) {
             // OPTIMIZE: remove clone.
