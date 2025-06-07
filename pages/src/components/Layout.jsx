@@ -1,30 +1,24 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 
-function Layout({ children, showSidebar = true }) {
+function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
-  }
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev)
 
   return (
     <div className="app">
       <div className="layout">
-        {showSidebar && (
-          <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-            <nav>
-              <p>Navigation</p>
-            </nav>
-          </aside>
-        )}
-        <div className={`main-container ${sidebarOpen && showSidebar ? 'sidebar-open' : ''}`}>
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <nav>
+            <p>Navigation</p>
+          </nav>
+        </aside>
+        <div className={`main-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
           <header className="header">
-            <div className={`header-content ${showSidebar ? 'has-toggle' : ''}`}>
-              {showSidebar && (
-                <button className="menu-toggle" onClick={toggleSidebar}>
-                  ☰
-                </button>
-              )}
+            <div className="header-content">
+              <button className="menu-toggle" onClick={toggleSidebar}>
+                ☰
+              </button>
               <div className="logo">Fuzzy, a programming language.</div>
             </div>
           </header>
