@@ -1,0 +1,17 @@
+{
+  "name": "Fuzzy",
+  "id": "fuzzy",
+  "scopeName": "source.fuzzy",
+  "fileTypes": ["fuzzy"],
+  "aliases": ["fuzzy"],
+  "patterns": [
+    {
+      "name": "comment.line.double-hyphen.fuzzy",
+      "match": "--.*$"
+    },
+    {
+      "name": "constant.numeric.fuzzy",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    }
+  ]
+}
