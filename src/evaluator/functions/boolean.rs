@@ -23,24 +23,24 @@ fn not(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 
 fn on_then(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     if unwrap_subject(&s) {
-        let mut o = pop_extract_variant!(args, Lazy);
+        let o = pop_extract_variant!(args, Lazy);
         let params = EnterLazyParams {
             slf: None,
             args: Some(vec![]),
         };
-        let _ = eval_block(env, &mut o, params)?;
+        let _ = eval_block(env, &mut o.into(), params)?;
     }
     Ok(s)
 }
 
 fn on_else(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     if !unwrap_subject(&s) {
-        let mut o = pop_extract_variant!(args, Lazy);
+        let o = pop_extract_variant!(args, Lazy);
         let params = EnterLazyParams {
             slf: None,
             args: Some(vec![]),
         };
-        let _ = eval_block(env, &mut o, params)?;
+        let _ = eval_block(env, &mut o.into(), params)?;
     }
     Ok(s)
 }

@@ -27,24 +27,25 @@ fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 
 fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
-    Ok(s.first().map(|n| Value::String(n.to_string())).unwrap_or_default())
+    Ok(s.back()
+        .map(|n| Value::String(n.to_string()))
+        .unwrap_or_default())
 }
 
 fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
-    Ok(s.last().map(|n| Value::String(n.to_string())).unwrap_or_default())
+    Ok(s.front()
+        .map(|n| Value::String(n.to_string()))
+        .unwrap_or_default())
 }
 
 fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, I32);
-    let n = if o >= 0 {
-        s.get(o as usize)
-    } else {
-        let i = o + s.len() as i32;
-        if i >= 0 { s.get(i as usize) } else { None }
-    };
-    Ok(n.map(|n| Value::String(n.to_string())).unwrap_or_default())
+    let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
+    let n = s.get(i).map(|n| Value::String(n.to_string()));
+    Ok(n.unwrap_or_default())
 }
 
 fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
@@ -53,8 +54,9 @@ fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value
     let n = args.pop().expect("type missmatched.");
     let n = extract_variant!(n, String);
     let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
     s[i] = Token::from(&n);
-    Ok(Value::String(format!("{:?}", s)))
+    Ok(Value::Lazy(s))
 }
 
 fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
@@ -63,46 +65,48 @@ fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let n = args.pop().expect("type missmatched.");
     let n = extract_variant!(n, String);
     let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
     s.insert(i, Token::from(&n));
-    Ok(Value::String(format!("{:?}", s)))
+    Ok(Value::Lazy(s))
 }
 
 fn remove(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, I32);
     let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
     s.remove(i);
-    Ok(Value::String(format!("{:?}", s)))
+    Ok(Value::Lazy(s))
 }
 
 fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
     let o = args.pop().expect("type missmatched.");
     let o = extract_variant!(o, String);
-    s.push(Token::from(&o));
-    Ok(Value::String(format!("{:?}", s)))
+    s.push_front(Token::from(&o));
+    Ok(Value::Lazy(s))
 }
 
 fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
-    s.pop();
-    Ok(Value::String(format!("{:?}", s)))
+    s.pop_front();
+    Ok(Value::Lazy(s))
 }
 
 fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
-    let mut s = extract_variant!(s, Lazy);
-    eval(env, &mut s, Vec::new())
+    let s = extract_variant!(s, Lazy);
+    eval(env, &mut s.into(), Vec::new())
 }
 
 fn while_loop(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, Lazy);
     loop {
-        let r = eval(env, &mut s.clone(), Vec::new())?;
+        let r = eval(env, &mut s.clone().into(), Vec::new())?;
         if r == Value::Nil {
             break;
         }
-        eval(env, &mut o.clone(), vec![r])?;
+        eval(env, &mut o.clone().into(), vec![r])?;
     }
     Ok(Value::Nil)
 }
@@ -125,7 +129,7 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
         variable::insert(&mut env.fn_map, &t);
     }
 
-    Ok(Value::Function((t, s)))
+    Ok(Value::Function((t, s.into())))
 }
 
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {

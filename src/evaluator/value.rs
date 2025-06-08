@@ -1,7 +1,7 @@
 use super::{Environment, types::TypeId};
 use crate::{RResult, lexer::Token};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     fmt::{Display, Result},
 };
 
@@ -30,7 +30,7 @@ pub enum Value {
     String(String),
     Symbol(String),
     Array(Vec<Value>),
-    Lazy(Vec<Token>),
+    Lazy(VecDeque<Token>),
     Function((TypeId, Vec<Token>)),
     UserType((TypeId, HashMap<String, Object>)),
 }
