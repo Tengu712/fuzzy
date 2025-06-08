@@ -52,8 +52,7 @@ fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
 fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, I32);
-    let n = args.pop().expect("type missmatched.");
-    let n = extract_variant!(n, String);
+    let n = pop_extract_variant!(args, String);
     let i = convert_index(o, s.len())?;
     let i = s.len() - 1 - i;
     s[i] = Token::from(&n);
@@ -63,8 +62,7 @@ fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value
 fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, I32);
-    let n = args.pop().expect("type missmatched.");
-    let n = extract_variant!(n, String);
+    let n = pop_extract_variant!(args, String);
     let i = convert_index(o, s.len())?;
     let i = s.len() - 1 - i;
     s.insert(i, Token::from(&n));
@@ -82,8 +80,7 @@ fn remove(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value>
 
 fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
-    let o = args.pop().expect("type missmatched.");
-    let o = extract_variant!(o, String);
+    let o = pop_extract_variant!(args, String);
     s.push_front(Token::from(&o));
     Ok(Value::Lazy(s))
 }
