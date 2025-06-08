@@ -42,10 +42,11 @@ fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, I32);
-    let i = convert_index(o, s.len())?;
+    let Ok(i) = convert_index(o, s.len()) else {
+        return Ok(Value::Nil);
+    };
     let i = s.len() - 1 - i;
-    let n = s.get(i).map(|n| Value::String(n.to_string()));
-    Ok(n.unwrap_or_default())
+    Ok(Value::String(s[i].to_string()))
 }
 
 fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
