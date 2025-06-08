@@ -36,6 +36,7 @@ mod cmp;
 mod lazy;
 mod numeric;
 mod print;
+mod string;
 mod variable;
 
 use super::{types::*, value::Value, *};
@@ -93,6 +94,7 @@ impl FunctionMapStack {
         boolean::insert(self);
         lazy::insert(self);
         numeric::insert(self);
+        string::insert(self);
     }
 
     pub fn pop(&mut self) {
@@ -191,6 +193,19 @@ impl FunctionMapStack {
             .unwrap_or_else(|| panic!("function map for {ty} not inserted."));
         n.reserve(funs.len());
         n.extend(funs);
+    }
+}
+
+fn convert_index(i: i32, l: usize) -> RResult<usize> {
+    let l = l as i32;
+    if i >= l {
+        Err(format!("error: index must be 0 <= index < {l} but passed {i}.").into())
+    } else if i >= 0 {
+        Ok(i as usize)
+    } else if i + l < 0 {
+        Err(format!("error: reverse order index must be -{l} <= index < 0 but passed {i}.").into())
+    } else {
+        Ok((i + l) as usize)
     }
 }
 

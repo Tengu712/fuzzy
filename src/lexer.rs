@@ -47,13 +47,28 @@ impl Display for Token {
             Self::LBracket => write!(f, "["),
             Self::RBracket => write!(f, "]"),
             Self::Top => write!(f, "T"),
-            n => write!(f, "{n:?}"),
+            Self::I8(n) => write!(f, "{n}"),
+            Self::U8(n) => write!(f, "{n}"),
+            Self::I16(n) => write!(f, "{n}"),
+            Self::U16(n) => write!(f, "{n}"),
+            Self::I32(n) => write!(f, "{n}"),
+            Self::U32(n) => write!(f, "{n}"),
+            Self::I64(n) => write!(f, "{n}"),
+            Self::U64(n) => write!(f, "{n}"),
+            Self::I128(n) => write!(f, "{n}"),
+            Self::U128(n) => write!(f, "{n}"),
+            Self::F32(n) => write!(f, "{n}"),
+            Self::F64(n) => write!(f, "{n}"),
+            Self::String(n) => write!(f, "\"{n}\""),
+            Self::Symbol(n) => write!(f, "'{n}"),
+            Self::Argument(n) => write!(f, "#{n}"),
+            Self::Label(n) => write!(f, "{n}"),
         }
     }
 }
 
 impl Token {
-    fn from(s: &str) -> Self {
+    pub fn from(s: &str) -> Self {
         if s == "." {
             Self::Dot
         } else if s == "," {

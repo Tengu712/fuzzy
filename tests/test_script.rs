@@ -53,7 +53,7 @@ fn test_symbol_value() {
 
 #[test]
 fn test_lazy_block() {
-    run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n");
+    run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n1\n2\n");
 }
 
 #[test]
@@ -138,6 +138,14 @@ fn test_extend_builtin_type() {
 #[test]
 fn test_define_type() {
     run("tests/scripts/define-type.fuz", "12\n55\n35\n");
+}
+
+#[test]
+fn test_string() {
+    run(
+        "tests/scripts/string.fuz",
+        "Hello, world!\n13H!o()HeelOO, wOOrld! fug\n",
+    );
 }
 
 #[test]

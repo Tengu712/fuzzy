@@ -4,6 +4,15 @@ pub fn insert(fm: &mut FunctionMapStack) {
     fm.insert_builtins(
         &TypeId::Lazy,
         vec![
+            builtin_fn!("#", vec![], length),
+            builtin_fn!("^", vec![], first),
+            builtin_fn!("$", vec![], last),
+            builtin_fn!("@", vec![TypeId::I32], at),
+            builtin_fn!("@@", vec![TypeId::I32, TypeId::String], replace),
+            builtin_fn!("@<", vec![TypeId::I32, TypeId::String], ins),
+            builtin_fn!("@-", vec![TypeId::I32], remove),
+            builtin_fn!("$>", vec![TypeId::String], push),
+            builtin_fn!("$-", vec![], pop),
             builtin_fn!("%", vec![], eval_lazy_block),
             builtin_fn!("%%", vec![TypeId::Lazy], while_loop),
             builtin_fn!(":", vec![TypeId::Array], define_function),
@@ -11,20 +20,91 @@ pub fn insert(fm: &mut FunctionMapStack) {
     );
 }
 
-fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+fn length(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    Ok(Value::U32(s.len() as u32))
+}
+
+fn first(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    Ok(s.back()
+        .map(|n| Value::String(n.to_string()))
+        .unwrap_or_default())
+}
+
+fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    Ok(s.front()
+        .map(|n| Value::String(n.to_string()))
+        .unwrap_or_default())
+}
+
+fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, I32);
+    let Ok(i) = convert_index(o, s.len()) else {
+        return Ok(Value::Nil);
+    };
+    let i = s.len() - 1 - i;
+    Ok(Value::String(s[i].to_string()))
+}
+
+fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let mut s = extract_variant!(s, Lazy);
-    eval(env, &mut s, Vec::new())
+    let o = pop_extract_variant!(args, I32);
+    let n = pop_extract_variant!(args, String);
+    let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
+    s[i] = Token::from(&n);
+    Ok(Value::Lazy(s))
+}
+
+fn ins(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, I32);
+    let n = pop_extract_variant!(args, String);
+    let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
+    s.insert(i, Token::from(&n));
+    Ok(Value::Lazy(s))
+}
+
+fn remove(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, I32);
+    let i = convert_index(o, s.len())?;
+    let i = s.len() - 1 - i;
+    s.remove(i);
+    Ok(Value::Lazy(s))
+}
+
+fn push(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Lazy);
+    let o = pop_extract_variant!(args, String);
+    s.push_front(Token::from(&o));
+    Ok(Value::Lazy(s))
+}
+
+fn pop(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let mut s = extract_variant!(s, Lazy);
+    s.pop_front();
+    Ok(Value::Lazy(s))
+}
+
+fn eval_lazy_block(env: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
+    let s = extract_variant!(s, Lazy);
+    eval(env, &mut s.into(), Vec::new())
 }
 
 fn while_loop(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Lazy);
     let o = pop_extract_variant!(args, Lazy);
     loop {
-        let r = eval(env, &mut s.clone(), Vec::new())?;
+        let r = eval(env, &mut s.clone().into(), Vec::new())?;
         if r == Value::Nil {
             break;
         }
-        eval(env, &mut o.clone(), vec![r])?;
+        eval(env, &mut o.clone().into(), vec![r])?;
     }
     Ok(Value::Nil)
 }
@@ -47,7 +127,7 @@ fn define_function(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RRe
         variable::insert(&mut env.fn_map, &t);
     }
 
-    Ok(Value::Function((t, s)))
+    Ok(Value::Function((t, s.into())))
 }
 
 fn call(env: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {

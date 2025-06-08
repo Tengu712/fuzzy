@@ -205,7 +205,7 @@ fn eval_element(env: &mut Environment, tokens: &mut Vec<Token>) -> RResult<Value
         Some(Token::RParen) => Err("error: unmatched ')' found.".into()),
         Some(Token::LBrace) => {
             let n = extract_brackets_content(tokens, Token::LBrace, Token::RBrace)?;
-            Ok(Value::Lazy(n))
+            Ok(Value::Lazy(n.into()))
         }
         Some(Token::RBrace) => Err("error: unmatched '}' found.".into()),
         Some(Token::LBracket) => {
