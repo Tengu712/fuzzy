@@ -39,14 +39,11 @@ fn last(_: &mut Environment, s: Value, _: Vec<Value>) -> RResult<Value> {
 fn at(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {
     let s = extract_variant!(s, Array);
     let o = pop_extract_variant!(args, I32);
-    let n = if o >= 0 {
-        s.get(o as usize)
-    } else {
-        let i = o + s.len() as i32;
-        if i >= 0 { s.get(i as usize) } else { None }
+    let Ok(i) = convert_index(o, s.len()) else {
+        return Ok(Value::Nil);
     };
     // OPTIMIZE: remove clone.
-    Ok(n.cloned().unwrap_or_default())
+    Ok(s[i].clone())
 }
 
 fn replace(_: &mut Environment, s: Value, mut args: Vec<Value>) -> RResult<Value> {

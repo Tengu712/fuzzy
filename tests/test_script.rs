@@ -141,6 +141,14 @@ fn test_define_type() {
 }
 
 #[test]
+fn test_string() {
+    run(
+        "tests/scripts/string.fuz",
+        "Hello, world!\n13H!o()HeelOO, wOOrld! fug\n",
+    );
+}
+
+#[test]
 fn test_type_missmatched_addition() {
     run_wrong("tests/scripts/wrong-add.fuz");
 }

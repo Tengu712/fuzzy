@@ -1,0 +1,15 @@
+-- String test. --
+
+"Hello, world!" -> 's.
+s !!
+s # !
+s ^ !
+s $ !
+s @ 4, !
+s @ 100, !
+s @< 2 "e", -> 's.
+s @- 4, -> 's.
+s $> " fuga", -> 's.
+s $-, -> 's.
+s =@ "o" "OO", -> 's.
+s !!
