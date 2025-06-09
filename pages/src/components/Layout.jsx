@@ -13,6 +13,7 @@ function Layout({ children }) {
           <nav>
             <Link to="/"                     className="sidebar-link">Introduction</Link>
             <Link to="/literal-and-keyword/" className="sidebar-link">Literal & Keyword</Link>
+            <Link to="/grammar/"             className="sidebar-link">Grammar</Link>
             <div>
               <a href="https://github.com/Tengu712/fuzzy">
                 <img src="/fuzzy/github-mark-white.svg" alt="GitHub" />
