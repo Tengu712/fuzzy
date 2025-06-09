@@ -13,7 +13,7 @@ export default defineConfig({
         [
           rehypeShiki,
           {
-            theme: 'github-light',
+            theme: 'slack-dark',
             langs: [fuzzyGrammar]
           }
         ]

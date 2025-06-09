@@ -28,7 +28,8 @@ body {
   left: 0;
   width: min(300px, 80vw);
   height: 100vh;
-  background: #f1eeee;
+  background: rgb(34, 34, 34);
+  color: rgb(230, 230, 230);
   padding: 1rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
@@ -108,7 +109,8 @@ body {
 .main-content {
   flex: 1;
   padding-bottom: 4rem;
-  max-width: 800px;
+  max-width: 700px;
+  width: 700px;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -122,4 +124,12 @@ body {
   font-family: inherit;
   line-height: inherit;
   color: inherit;
+}
+
+.mdx-content pre {
+  padding-top: 20px;
+  padding-bottom: 20px;
+  padding-left: 24px;
+  padding-right: 24px;
+  border-radius: 10px;
 }

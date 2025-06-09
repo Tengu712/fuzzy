@@ -6,12 +6,31 @@
   "aliases": ["fuzzy"],
   "patterns": [
     {
-      "name": "comment.line.double-hyphen.fuzzy",
+      "name": "comment.line.double-dash.fuzzy",
       "match": "--.*$"
     },
     {
+      "name": "keyword.control.fuzzy",
+      "match": "/.+\\b"
+    },
+    {
       "name": "constant.numeric.fuzzy",
-      "match": "\\b\\d+(\\.\\d+)?\\b"
+      "match": "\\b\\d+(\\.\\d+)?((u|i)\\d+)?\\b"
+    },
+    {
+      "name": "constant.language.fuzzy",
+      "match": "T|\\(\\)|('|#).*\\b"
+    },
+    {
+      "name": "string.quoted.double.fuzzy",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.fuzzy",
+          "match": "\\\\."
+        }
+      ]
     }
   ]
 }
