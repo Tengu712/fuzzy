@@ -11,7 +11,8 @@ function Layout({ children }) {
       <div className="layout">
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <nav>
-            <Link to="/" className="sidebar-link">Introduction</Link>
+            <Link to="/"         className="sidebar-link">Introduction</Link>
+            <Link to="/literal/" className="sidebar-link">Literal</Link>
             <div>
               <a href="https://github.com/Tengu712/fuzzy">
                 <img src="/fuzzy/github-mark-white.svg" alt="GitHub" />

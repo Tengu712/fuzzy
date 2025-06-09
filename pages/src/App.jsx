@@ -1,22 +1,30 @@
-import { useState, Suspense, lazy } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 
 function MdxPage() {
+  const location = useLocation()
+
+  const [MdxComponent, setMdxComponent] = useState(null)
   const [hasError, setHasError] = useState(false)
 
-  const filename = useLocation().pathname.replace(/^\/|\/$/g, '') || 'index'
-  const LazyMdxComponent = lazy(() => import(`./pages/${filename}.mdx`).catch(() => setHasError(true)))
+  useEffect(() => {
+    setHasError(false)
+    const filename = location.pathname.replace(/^\/|\/$/g, '') || 'index'
+    import(`./pages/${filename}.mdx`)
+      .then((n) => setMdxComponent(() => n.default))
+      .catch(() => setHasError(true))
+  }, [location])
 
-  if (hasError) return <div>Page not found.</div>
-
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <Layout>
-        <LazyMdxComponent />
-      </Layout>
-    </Suspense>
-  )
+  return hasError
+    ? (<div>Page not found.</div>)
+    : (
+      <Suspense fallback={<div>Loading...</div>}>
+        <Layout>
+          {MdxComponent && <MdxComponent />}
+        </Layout>
+      </Suspense>
+    )
 }
 
 function App() {
