@@ -30,7 +30,8 @@ body {
   height: 100vh;
   background: rgb(34, 34, 34);
   color: rgb(230, 230, 230);
-  padding: 1rem;
+  padding-top: 2.2rem;
+  padding-bottom: 1rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
   z-index: 1000;
@@ -38,6 +39,25 @@ body {
 
 .sidebar.open {
   transform: translateX(0);
+}
+
+.sidebar nav>* {
+  padding: 0.25rem 1rem;
+}
+
+.sidebar img {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.sidebar-link {
+  display: block;
+  color: rgb(230, 230, 230);
+  text-decoration: none;
+}
+
+.sidebar-link:hover {
+  background: rgb(80, 80, 80);
 }
 
 .main-container {

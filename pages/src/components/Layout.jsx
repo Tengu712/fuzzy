@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -10,7 +11,12 @@ function Layout({ children }) {
       <div className="layout">
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <nav>
-            <p>Navigation</p>
+            <Link to="/" className="sidebar-link">Introduction</Link>
+            <div>
+              <a href="https://github.com/Tengu712/fuzzy">
+                <img src="/fuzzy/github-mark-white.svg" alt="GitHub" />
+              </a>
+            </div>
           </nav>
         </aside>
         <div className={`main-container ${sidebarOpen ? 'sidebar-open' : ''}`}>
