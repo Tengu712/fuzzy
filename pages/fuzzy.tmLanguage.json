@@ -11,15 +11,15 @@
     },
     {
       "name": "keyword.control.fuzzy",
-      "match": "/.+\\b"
+      "match": "/S+\\b"
     },
     {
       "name": "constant.numeric.fuzzy",
-      "match": "\\b\\d+(\\.\\d+)?((u|i)\\d+)?\\b"
+      "match": "-?(\\d+\\.?\\d*|\\.\\d+)((i|u)(8|16|32|64|128)|f(32|64))?"
     },
     {
       "name": "constant.language.fuzzy",
-      "match": "T|\\(\\)|('|#).*\\b"
+      "match": "T|\\(\\)|('|#)[^\\(\\)\\[\\]{},\\.\\s]*"
     },
     {
       "name": "string.quoted.double.fuzzy",
