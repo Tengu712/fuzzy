@@ -92,36 +92,6 @@ impl Display for Value {
     }
 }
 
-macro_rules! define_inequality_compare {
-    ($fn:ident, $op:tt) => {
-        pub fn $fn(&self, other: &Self) -> bool {
-            match (self, other) {
-                (Self::Nil, Self::Nil) => false,
-                (Self::Top, Self::Top) => false,
-                (Self::I8(a), Self::I8(b)) => a $op b,
-                (Self::U8(a), Self::U8(b)) => a $op b,
-                (Self::I16(a), Self::I16(b)) => a $op b,
-                (Self::U16(a), Self::U16(b)) => a $op b,
-                (Self::I32(a), Self::I32(b)) => a $op b,
-                (Self::U32(a), Self::U32(b)) => a $op b,
-                (Self::I64(a), Self::I64(b)) => a $op b,
-                (Self::U64(a), Self::U64(b)) => a $op b,
-                (Self::I128(a), Self::I128(b)) => a $op b,
-                (Self::U128(a), Self::U128(b)) => a $op b,
-                (Self::F32(a), Self::F32(b)) => a $op b,
-                (Self::F64(a), Self::F64(b)) => a $op b,
-                (Self::String(a), Self::String(b)) => a $op b,
-                (Self::Symbol(a), Self::Symbol(b)) => a $op b,
-                _ => panic!(
-                    "tried to compare {} and {}",
-                    self.typeid(),
-                    other.typeid(),
-                ),
-            }
-        }
-    };
-}
-
 impl Value {
     pub fn from(env: &Environment, token: Token) -> RResult<Self> {
         match token {
@@ -194,6 +164,8 @@ impl Value {
         match (self, other) {
             (Self::Nil, Self::Nil) => true,
             (Self::Top, Self::Top) => true,
+            (Self::Nil, Self::Top) => false,
+            (Self::Top, Self::Nil) => false,
             (Self::I8(a), Self::I8(b)) => a == b,
             (Self::U8(a), Self::U8(b)) => a == b,
             (Self::I16(a), Self::I16(b)) => a == b,
@@ -220,6 +192,51 @@ impl Value {
         }
     }
 
-    define_inequality_compare!(l, <);
-    define_inequality_compare!(g, >);
+    pub fn l(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Nil, Self::Nil) => false,
+            (Self::Top, Self::Top) => false,
+            (Self::Nil, Self::Top) => true,
+            (Self::Top, Self::Nil) => false,
+            (Self::I8(a), Self::I8(b)) => a < b,
+            (Self::U8(a), Self::U8(b)) => a < b,
+            (Self::I16(a), Self::I16(b)) => a < b,
+            (Self::U16(a), Self::U16(b)) => a < b,
+            (Self::I32(a), Self::I32(b)) => a < b,
+            (Self::U32(a), Self::U32(b)) => a < b,
+            (Self::I64(a), Self::I64(b)) => a < b,
+            (Self::U64(a), Self::U64(b)) => a < b,
+            (Self::I128(a), Self::I128(b)) => a < b,
+            (Self::U128(a), Self::U128(b)) => a < b,
+            (Self::F32(a), Self::F32(b)) => a < b,
+            (Self::F64(a), Self::F64(b)) => a < b,
+            (Self::String(a), Self::String(b)) => a < b,
+            (Self::Symbol(a), Self::Symbol(b)) => a < b,
+            _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
+        }
+    }
+
+    pub fn g(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Nil, Self::Nil) => false,
+            (Self::Top, Self::Top) => false,
+            (Self::Nil, Self::Top) => false,
+            (Self::Top, Self::Nil) => true,
+            (Self::I8(a), Self::I8(b)) => a > b,
+            (Self::U8(a), Self::U8(b)) => a > b,
+            (Self::I16(a), Self::I16(b)) => a > b,
+            (Self::U16(a), Self::U16(b)) => a > b,
+            (Self::I32(a), Self::I32(b)) => a > b,
+            (Self::U32(a), Self::U32(b)) => a > b,
+            (Self::I64(a), Self::I64(b)) => a > b,
+            (Self::U64(a), Self::U64(b)) => a > b,
+            (Self::I128(a), Self::I128(b)) => a > b,
+            (Self::U128(a), Self::U128(b)) => a > b,
+            (Self::F32(a), Self::F32(b)) => a > b,
+            (Self::F64(a), Self::F64(b)) => a > b,
+            (Self::String(a), Self::String(b)) => a > b,
+            (Self::Symbol(a), Self::Symbol(b)) => a > b,
+            _ => panic!("tried to compare {} and {}", self.typeid(), other.typeid(),),
+        }
+    }
 }
