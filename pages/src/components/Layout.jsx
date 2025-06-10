@@ -24,6 +24,7 @@ function Layout({ children }) {
             <Link to='/builtin-types/array/'    className='sidebar-link nested'>[]</Link>
             <Link to='/builtin-types/lazy/'     className='sidebar-link nested'>{'{}'}</Link>
             <Link to='/builtin-types/function/' className='sidebar-link nested'>function</Link>
+            <Link to='/release-note/' className='sidebar-link'>Release Note</Link>
             <div>
               <a href='https://github.com/Tengu712/fuzzy'>
                 <img src='/fuzzy/github-mark-white.svg' alt='GitHub' />
