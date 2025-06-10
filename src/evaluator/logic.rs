@@ -12,14 +12,18 @@ pub fn eval_sentence(
     is_toplevel: bool,
 ) -> RResult<Option<Value>> {
     let mut s = caches.pop();
+    let mut first = true;
     loop {
         // take over subject
         if let Some(s) = s.take() {
             caches.push(s);
+        } else if !first {
+            caches.push(Value::Nil);
         }
 
         // eval clause
         s = eval_clause(env, tokens, caches)?;
+        first = false;
 
         // consume comma
         //
@@ -55,8 +59,8 @@ pub fn eval_sentence(
         //         over to the next loop.
         //       - Otherwise, the sentence ends here, meaning `V'` is considered
         //         the subject of the next sentence.
-        let ty = &s.as_ref().unwrap().typeid();
-        if let Some(vn) = take_verb_name(env, tokens, ty) {
+        let ty = s.as_ref().unwrap_or(&Value::Nil).typeid();
+        if let Some(vn) = take_verb_name(env, tokens, &ty) {
             tokens.push(Token::Label(vn));
         } else {
             break;
