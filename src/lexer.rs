@@ -92,7 +92,7 @@ impl Token {
         } else if let Some(n) = parse_number(s) {
             n
         } else if s.starts_with("\"") && s.ends_with("\"") {
-            Self::String(s[1..s.len() - 1].to_string())
+            Self::String(parse_string_literal(&s[1..s.len() - 1]))
         } else if s.starts_with("'") {
             Self::Symbol(s[1..s.len()].to_string())
         } else if let Some(n) = parse_argument(s) {
@@ -105,7 +105,7 @@ impl Token {
 
 pub fn lex(code: &str) -> RResult<Vec<Token>> {
     let mut tokens = Vec::new();
-    let regex = Regex::new(r#""[^"]*"|[(\{\[)\}\]]|\S+|\.|,|;"#)?;
+    let regex = Regex::new(r#""(?:[^"\\]|\\.)*"|[(\{\[)\}\]]|\S+|\.|,|;"#)?;
     for l in code.lines() {
         let l = l.find("--").map(|n| &l[..n]).unwrap_or(l);
         let i = regex
@@ -182,6 +182,31 @@ fn parse_argument(s: &str) -> Option<Token> {
         .map(Token::Argument)
 }
 
+fn parse_string_literal(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => result.push('\n'),
+                Some('t') => result.push('\t'),
+                Some('r') => result.push('\r'),
+                Some('\\') => result.push('\\'),
+                Some('"') => result.push('"'),
+                Some('0') => result.push('\0'),
+                Some(c) => {
+                    result.push('\\');
+                    result.push(c);
+                }
+                None => result.push('\\'),
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -256,6 +281,18 @@ mod test {
     #[test]
     fn test_lex_semicolon() {
         let tokens = lex("1 + 2; * 5").unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_string() {
+        let tokens = lex(r#""hello world""#).unwrap();
+        insta::assert_yaml_snapshot!(tokens);
+    }
+
+    #[test]
+    fn test_string_literal_escape() {
+        let tokens = lex(r#""hell\\o\nworld\t\"test\"""#).unwrap();
         insta::assert_yaml_snapshot!(tokens);
     }
 
