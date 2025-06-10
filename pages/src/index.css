@@ -157,6 +157,8 @@ body {
   padding-left: 24px;
   padding-right: 24px;
   border-radius: 10px;
+  overflow-x: auto;
+  white-space: pre;
 }
 
 .mdx-content code:not(pre code) {
