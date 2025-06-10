@@ -53,7 +53,10 @@ fn test_symbol_value() {
 
 #[test]
 fn test_lazy_block() {
-    run("tests/scripts/lazy-block.fuz", "3\nHello, world!\n1\n2\n");
+    run(
+        "tests/scripts/lazy-block.fuz",
+        "3\nHello, world!\n1\n2\nHello,\nworld\t!\n",
+    );
 }
 
 #[test]

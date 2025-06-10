@@ -1,0 +1,5 @@
+---
+source: src/lexer.rs
+expression: tokens
+---
+- String: "hell\\o\nworld\t\"test\""
