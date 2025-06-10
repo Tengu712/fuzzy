@@ -2,6 +2,8 @@ import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 
+const mdxModules = Object.entries(import.meta.glob('./pages/**/*.mdx')).map(([path, module]) => ({ module: module, path: path.slice(8, -4) }))
+
 function MdxPage() {
   const location = useLocation()
 
@@ -10,10 +12,11 @@ function MdxPage() {
 
   useEffect(() => {
     setHasError(false)
-    const filename = location.pathname.replace(/^\/|\/$/g, '') || 'index'
-    import(`./pages/${filename}.mdx`)
-      .then((n) => setMdxComponent(() => n.default))
-      .catch(() => setHasError(true))
+    const path = location.pathname.replace(/^\/|\/$/g, '') || 'index'
+    mdxModules.find((n) => n.path === path)?.module()
+        .then((n) => setMdxComponent(() => n.default))
+        .catch(() => setHasError(true))
+      ?? setHasError(true)
   }, [location])
 
   return hasError

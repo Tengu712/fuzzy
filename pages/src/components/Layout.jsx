@@ -15,6 +15,10 @@ function Layout({ children }) {
             <Link to="/literal-and-keyword/" className="sidebar-link">Literal & Keyword</Link>
             <Link to="/grammar/"             className="sidebar-link">Grammar</Link>
             <div>
+              <label>Built-in Types</label>
+            </div>
+            <Link to="/builtin-types/bool/" className="sidebar-link nested">bool</Link>
+            <div>
               <a href="https://github.com/Tengu712/fuzzy">
                 <img src="/fuzzy/github-mark-white.svg" alt="GitHub" />
               </a>
