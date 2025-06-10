@@ -17,12 +17,13 @@ function Layout({ children }) {
             <div>
               <label>Built-in Types</label>
             </div>
-            <Link to='/builtin-types/bool/' className='sidebar-link nested'>bool</Link>
-            <Link to='/builtin-types/numeric/' className='sidebar-link nested'>numeric</Link>
-            <Link to='/builtin-types/string/' className='sidebar-link nested'>string</Link>
-            <Link to='/builtin-types/symbol/' className='sidebar-link nested'>symbol</Link>
-            <Link to='/builtin-types/array/' className='sidebar-link nested'>[]</Link>
-            <Link to='/builtin-types/lazy/' className='sidebar-link nested'>{'{}'}</Link>
+            <Link to='/builtin-types/bool/'     className='sidebar-link nested'>bool</Link>
+            <Link to='/builtin-types/numeric/'  className='sidebar-link nested'>numeric</Link>
+            <Link to='/builtin-types/string/'   className='sidebar-link nested'>string</Link>
+            <Link to='/builtin-types/symbol/'   className='sidebar-link nested'>symbol</Link>
+            <Link to='/builtin-types/array/'    className='sidebar-link nested'>[]</Link>
+            <Link to='/builtin-types/lazy/'     className='sidebar-link nested'>{'{}'}</Link>
+            <Link to='/builtin-types/function/' className='sidebar-link nested'>function</Link>
             <div>
               <a href='https://github.com/Tengu712/fuzzy'>
                 <img src='/fuzzy/github-mark-white.svg' alt='GitHub' />
