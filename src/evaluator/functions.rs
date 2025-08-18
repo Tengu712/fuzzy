@@ -50,7 +50,7 @@ pub enum TypesCheckResult {
     Err(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Function {
     mutable: bool,
     private: bool,
@@ -58,7 +58,7 @@ pub struct Function {
     code: FunctionCode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum FunctionCode {
     Builtin(BuiltinFunctionCode),
     UserDefined(Vec<Token>),
