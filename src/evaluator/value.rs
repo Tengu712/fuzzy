@@ -13,6 +13,7 @@ pub struct Object {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
+    #[default]
     Nil,
     Top,
     I8(i8),
@@ -33,12 +34,6 @@ pub enum Value {
     Lazy(VecDeque<Token>),
     Function((TypeId, Vec<Token>)),
     UserType((TypeId, HashMap<String, Object>)),
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Self::Nil
-    }
 }
 
 impl Display for Value {
